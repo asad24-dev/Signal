@@ -295,8 +295,8 @@ export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamPr
         {headlines.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">No headlines yet</p>
-            <p className="text-xs mt-1">Click "SCAN FEEDS NOW" to start</p>
+            <p className="text-sm">Monitoring global events...</p>
+            <p className="text-xs mt-1">AI-powered discovery is active</p>
           </div>
         ) : (
           <div className="p-2 space-y-2">
