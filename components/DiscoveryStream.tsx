@@ -17,14 +17,12 @@ export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamPr
   const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
   const [lastScan, setLastScan] = useState<Date | null>(null);
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
-  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [isLiveMode] = useState(true); // Always live mode
   const [newHeadlineIds, setNewHeadlineIds] = useState<Set<string>>(new Set());
 
   // Auto-refresh in live mode
   useEffect(() => {
-    if (!isLiveMode) return;
-
-    // Trigger immediate scan when entering live mode
+    // Trigger immediate scan on mount
     triggerScan(false); // Show loading UI
     
     // Then auto-scan every 10 minutes (600 seconds)
@@ -33,7 +31,7 @@ export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamPr
     }, 600000); // 10 minutes
     
     return () => clearInterval(interval);
-  }, [isLiveMode]);
+  }, []); // Run once on mount
 
   // Poll for updates every 10 seconds
   useEffect(() => {
@@ -205,32 +203,8 @@ export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamPr
           </div>
         </div>
         
-        {/* Live Mode Toggle */}
-        <div className="mb-3 flex items-center gap-2 p-2 bg-gray-900/50 rounded-lg">
-          <button
-            onClick={() => setIsLiveMode(false)}
-            className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              !isLiveMode 
-                ? 'bg-cyan-600 text-white' 
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Manual
-          </button>
-          <button
-            onClick={() => setIsLiveMode(true)}
-            className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              isLiveMode 
-                ? 'bg-green-600 text-white' 
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            🔴 Live
-          </button>
-        </div>
-        
         {/* Perplexity Discovery Status */}
-        {isLiveMode && !isScanning && (
+        {!isScanning && (
           <div className="mb-3 p-2 bg-purple-900/20 border border-purple-500/30 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
@@ -265,24 +239,6 @@ export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamPr
             </div>
           </div>
         )}
-        
-        <button
-          onClick={() => triggerScan(false)}
-          disabled={isScanning || isLiveMode}
-          className="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-        >
-          {isScanning && !isLiveMode ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Scanning...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              {isLiveMode ? 'AUTO MODE ACTIVE' : 'SCAN FEEDS NOW'}
-            </>
-          )}
-        </button>
         
         {/* Batch Analysis Button */}
         {signalsCount > 0 && (
