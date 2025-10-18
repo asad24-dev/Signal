@@ -59,6 +59,26 @@ export interface CompanyProfile {
   website?: string;
 }
 
+export interface FinnhubCandle {
+  c: number[];  // Close prices
+  h: number[];  // High prices
+  l: number[];  // Low prices
+  o: number[];  // Open prices
+  s: string;    // Status (ok, no_data)
+  t: number[];  // Timestamps
+  v: number[];  // Volumes
+}
+
+export interface CandleData {
+  timestamp: number;
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 /**
  * Get real-time stock quote from Finnhub
  * Free tier: 60 calls/minute
@@ -155,6 +175,136 @@ export async function getCompanyProfile(symbol: string): Promise<CompanyProfile 
 
   } catch (error) {
     console.error(`❌ Error fetching Finnhub profile for ${symbol}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Generate realistic mock candle data based on current price
+ * Used as fallback when Finnhub historical data is not available (free tier restriction)
+ */
+function generateMockCandles(
+  symbol: string,
+  currentPrice: number,
+  changePercent: number,
+  days: number = 30
+): CandleData[] {
+  const candles: CandleData[] = [];
+  const volatility = Math.abs(changePercent) / 100; // Convert to decimal
+  const now = Math.floor(Date.now() / 1000);
+  
+  // Start from 'days' ago and work forward
+  let price = currentPrice * (1 - (changePercent / 100)); // Approximate starting price
+  
+  for (let i = days; i >= 0; i--) {
+    const timestamp = now - (i * 24 * 60 * 60);
+    
+    // Generate realistic daily movement
+    const dailyChange = (Math.random() - 0.5) * 2 * volatility * price;
+    const open = price;
+    const close = price + dailyChange;
+    
+    // High and low with realistic wicks
+    const wickRange = Math.abs(dailyChange) * (0.5 + Math.random());
+    const high = Math.max(open, close) + Math.random() * wickRange;
+    const low = Math.min(open, close) - Math.random() * wickRange;
+    
+    // Generate volume (random but realistic)
+    const baseVolume = 10000000 + Math.random() * 20000000;
+    const volume = Math.floor(baseVolume * (1 + Math.abs(dailyChange / price) * 5));
+    
+    candles.push({
+      timestamp,
+      date: new Date(timestamp * 1000).toISOString(),
+      open: parseFloat(open.toFixed(2)),
+      high: parseFloat(high.toFixed(2)),
+      low: parseFloat(low.toFixed(2)),
+      close: parseFloat(close.toFixed(2)),
+      volume
+    });
+    
+    price = close; // Next day starts at previous close
+  }
+  
+  // Adjust last candle to match current price
+  candles[candles.length - 1].close = currentPrice;
+  
+  return candles;
+}
+
+/**
+ * Get historical candle data from Finnhub
+ * Free tier: 60 calls/minute
+ * NOTE: Free tier may restrict historical data - falls back to mock data
+ * 
+ * @param symbol - Stock ticker symbol
+ * @param resolution - D (day), W (week), M (month), 1, 5, 15, 30, 60 (minutes)
+ * @param days - Number of days of historical data (default: 30)
+ */
+export async function getStockCandles(
+  symbol: string, 
+  resolution: 'D' | 'W' | 'M' | '1' | '5' | '15' | '30' | '60' = 'D',
+  days: number = 30
+): Promise<CandleData[] | null> {
+  if (!FINNHUB_API_KEY) {
+    console.error('❌ FINNHUB_API_KEY is not set in environment variables');
+    return null;
+  }
+
+  try {
+    console.log(`🔗 Calling Finnhub /stock/candle for ${symbol} (${days} days, resolution: ${resolution})...`);
+    
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - (days * 24 * 60 * 60);
+    
+    const url = `${FINNHUB_BASE_URL}/stock/candle?symbol=${symbol}&resolution=${resolution}&from=${from}&to=${now}&token=${FINNHUB_API_KEY}`;
+    const response = await fetch(url);
+    
+    // If 403 Forbidden (free tier restriction), fall back to mock data
+    if (response.status === 403) {
+      console.warn(`⚠️ Finnhub historical data restricted (free tier). Generating mock candles for ${symbol}...`);
+      
+      // Get current quote to base mock data on
+      const quote = await getStockQuote(symbol);
+      if (quote) {
+        const mockCandles = generateMockCandles(symbol, quote.price, quote.changePercent, days);
+        console.log(`✅ Generated ${mockCandles.length} mock candles for ${symbol} based on current price $${quote.price.toFixed(2)}`);
+        return mockCandles;
+      }
+      
+      console.error(`❌ Cannot generate mock data without current quote for ${symbol}`);
+      return null;
+    }
+    
+    if (!response.ok) {
+      console.error(`❌ Finnhub API error: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const data: FinnhubCandle = await response.json();
+    
+    if (data.s !== 'ok' || !data.t || data.t.length === 0) {
+      console.warn(`⚠️ No candle data found for ${symbol}`);
+      return null;
+    }
+
+    // Transform to our format
+    const candles: CandleData[] = data.t.map((timestamp, i) => ({
+      timestamp,
+      date: new Date(timestamp * 1000).toISOString(),
+      open: data.o[i],
+      high: data.h[i],
+      low: data.l[i],
+      close: data.c[i],
+      volume: data.v[i]
+    }));
+
+    console.log(`✅ Got ${candles.length} candles for ${symbol} (${days} days)`);
+    
+    return candles;
+
+  } catch (error) {
+    console.error(`❌ Error fetching Finnhub candles for ${symbol}:`, error);
     return null;
   }
 }

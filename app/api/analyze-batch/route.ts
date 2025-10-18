@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
     const analysisTime = Date.now() - startTime;
     console.log(`✅ Batch analysis complete: ${analysisTime}ms`);
     console.log(`   Citations: ${batchAnalysis.citations.length}`);
+    console.log(`   Locations: ${batchAnalysis.locations?.length || 0}`);
     console.log(`   Lithium: ${batchAnalysis.assetChanges.lithium.currentScore} → ${batchAnalysis.assetChanges.lithium.newScore}`);
     console.log(`   Oil: ${batchAnalysis.assetChanges.oil.currentScore} → ${batchAnalysis.assetChanges.oil.newScore}`);
     console.log(`   Semiconductors: ${batchAnalysis.assetChanges.semiconductors.currentScore} → ${batchAnalysis.assetChanges.semiconductors.newScore}`);
@@ -146,6 +147,7 @@ export async function POST(request: NextRequest) {
           opportunities: batchAnalysis.opportunities || [], // All opportunities available for each asset
           citations: batchAnalysis.citations
         },
+        locations: batchAnalysis.locations || [], // Add locations to first signal
         confidence: 0.85,
         severity: batchAnalysis.assetChanges.lithium.newScore,
         urgency: 7,
@@ -242,7 +244,8 @@ export async function POST(request: NextRequest) {
         assetChanges: batchAnalysis.assetChanges,
         opportunities: batchAnalysis.opportunities,
         citations: batchAnalysis.citations,
-        crossAssetImpacts: batchAnalysis.crossAssetImpacts
+        crossAssetImpacts: batchAnalysis.crossAssetImpacts,
+        locations: batchAnalysis.locations || []
       },
       responseTime,
       timestamp: new Date().toISOString()

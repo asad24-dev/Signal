@@ -1,7 +1,9 @@
 'use client';
 
-import { TrendingUp, TrendingDown, Target, Clock, DollarSign } from 'lucide-react';
+import { useState } from 'react';
+import { TrendingUp, TrendingDown, Target, Clock, DollarSign, X } from 'lucide-react';
 import type { Opportunity } from '@/types';
+import { StockChart } from './StockChart';
 
 interface TradingOpportunitiesProps {
   opportunities: Opportunity[];
@@ -9,6 +11,8 @@ interface TradingOpportunitiesProps {
 }
 
 export function TradingOpportunities({ opportunities, assetName }: TradingOpportunitiesProps) {
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  
   if (opportunities.length === 0) {
     return (
       <div className="bg-[#0a0e1a] border border-gray-800 rounded-lg p-6">
@@ -43,9 +47,47 @@ export function TradingOpportunities({ opportunities, assetName }: TradingOpport
       {/* Opportunities Grid */}
       <div className="space-y-3">
         {opportunities.slice(0, 5).map((opp, index) => (
-          <OpportunityCard key={index} opportunity={opp} index={index} />
+          <OpportunityCard 
+            key={index} 
+            opportunity={opp} 
+            index={index}
+            onClick={() => setSelectedOpportunity(opp)}
+          />
         ))}
       </div>
+      
+      {/* Chart Modal */}
+      {selectedOpportunity && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedOpportunity(null)}
+        >
+          <div 
+            className="bg-[#0a0e1a] border border-gray-700 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">
+                {selectedOpportunity.company?.name || selectedOpportunity.company?.ticker || 'Stock Chart'}
+              </h2>
+              <button
+                onClick={() => setSelectedOpportunity(null)}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            
+            {selectedOpportunity.company?.ticker && (
+              <StockChart symbol={selectedOpportunity.company.ticker} days={30} />
+            )}
+            
+            <div className="mt-6 p-4 bg-gray-900/50 rounded-lg">
+              <p className="text-sm text-gray-300">{selectedOpportunity.description}</p>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Disclaimer */}
       <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
@@ -61,9 +103,10 @@ export function TradingOpportunities({ opportunities, assetName }: TradingOpport
 interface OpportunityCardProps {
   opportunity: Opportunity;
   index: number;
+  onClick: () => void;
 }
 
-function OpportunityCard({ opportunity, index }: OpportunityCardProps) {
+function OpportunityCard({ opportunity, index, onClick }: OpportunityCardProps) {
   const typeConfig: Record<string, {
     icon: any;
     color: string;
@@ -114,7 +157,10 @@ function OpportunityCard({ opportunity, index }: OpportunityCardProps) {
   }[opportunity.riskLevel];
   
   return (
-    <div className={`p-4 ${config.bg} border ${config.border} rounded-lg transition-all hover:border-opacity-60`}>
+    <div 
+      className={`p-4 ${config.bg} border ${config.border} rounded-lg transition-all hover:border-opacity-60 cursor-pointer hover:shadow-lg`}
+      onClick={onClick}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">

@@ -110,3 +110,16 @@ export interface StockDiscoveryResponse {
     reasoning: string;
   };
 }
+
+export interface ExtractedLocation {
+  id: string;
+  name: string;
+  country: string;
+  region?: string;
+  coordinates: [number, number]; // [latitude, longitude]
+  type: 'mine' | 'refinery' | 'port' | 'processing_plant' | 'general';
+  asset: 'lithium' | 'oil' | 'semiconductors';
+  riskLevel: 'low' | 'moderate' | 'elevated' | 'critical';
+  importance: number; // 0-1
+  description?: string;
+}

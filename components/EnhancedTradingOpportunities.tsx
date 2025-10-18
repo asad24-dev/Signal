@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Target, Clock, DollarSign, ChevronDown, ChevronUp, Info, BarChart3, TrendingUpDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Clock, DollarSign, ChevronDown, ChevronUp, Info, BarChart3, TrendingUpDown, LineChart } from 'lucide-react';
 import type { Opportunity } from '@/types';
 import type { EnhancedTradingOpportunity } from '@/types/finance';
+import { StockChartDialog } from './stock-chart-dialog';
 
 interface EnhancedTradingOpportunitiesProps {
   opportunities: (Opportunity | EnhancedTradingOpportunity)[];
@@ -70,6 +71,7 @@ interface EnhancedOpportunityCardProps {
 
 function EnhancedOpportunityCard({ opportunity, index }: EnhancedOpportunityCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showChart, setShowChart] = useState(false);
   
   // Check if this is an enhanced opportunity with correlation data
   const isEnhanced = 'correlation' in opportunity;
@@ -129,50 +131,67 @@ function EnhancedOpportunityCard({ opportunity, index }: EnhancedOpportunityCard
   // Correlation strength (0-100)
   const correlationPercent = enhanced ? Math.round(enhanced.correlation.strength * 100) : null;
   
+  const handleChartClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (ticker) {
+      setShowChart(true);
+    }
+  };
+  
   return (
-    <div 
-      className={`${config.bg} border ${config.border} rounded-lg p-4 transition-all hover:border-opacity-50 cursor-pointer`}
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
-      {/* Header Row */}
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-start gap-3 flex-1">
-          <div className={`${config.bg} p-2 rounded-lg mt-1`}>
-            <Icon className={`w-4 h-4 ${config.color}`} />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`text-xs font-bold ${config.color} uppercase tracking-wide`}>
-                {config.label}
-              </span>
-              {ticker && (
-                <span className="px-2 py-0.5 bg-gray-800 text-gray-300 text-xs font-mono rounded">
-                  {ticker}
+    <>
+      <div 
+        className={`${config.bg} border ${config.border} rounded-lg p-4 transition-all hover:border-opacity-50 cursor-pointer`}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        {/* Header Row */}
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-start gap-3 flex-1">
+            <div className={`${config.bg} p-2 rounded-lg mt-1`}>
+              <Icon className={`w-4 h-4 ${config.color}`} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-bold ${config.color} uppercase tracking-wide`}>
+                  {config.label}
                 </span>
-              )}
-              {correlationPercent !== null && (
-                <div className="flex items-center gap-1">
-                  <BarChart3 className="w-3 h-3 text-cyan-400" />
-                  <span className="text-xs text-cyan-400 font-medium">{correlationPercent}%</span>
-                </div>
+                {ticker && (
+                  <span className="px-2 py-0.5 bg-gray-800 text-gray-300 text-xs font-mono rounded">
+                    {ticker}
+                  </span>
+                )}
+                {ticker && (
+                  <button
+                    onClick={handleChartClick}
+                    className="p-1 hover:bg-gray-700 rounded transition-colors group"
+                    title="View price chart"
+                  >
+                    <LineChart className="w-3 h-3 text-gray-400 group-hover:text-cyan-400" />
+                  </button>
+                )}
+                {correlationPercent !== null && (
+                  <div className="flex items-center gap-1">
+                    <BarChart3 className="w-3 h-3 text-cyan-400" />
+                    <span className="text-xs text-cyan-400 font-medium">{correlationPercent}%</span>
+                  </div>
+                )}
+              </div>
+              <h4 className="text-sm font-semibold text-white mb-1">{companyName}</h4>
+              {sector && (
+                <span className="text-xs text-gray-400">{sector}</span>
               )}
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">{companyName}</h4>
-            {sector && (
-              <span className="text-xs text-gray-400">{sector}</span>
-            )}
           </div>
+          
+          {/* Expand/Collapse Icon */}
+          <button className="p-1 hover:bg-gray-800 rounded transition-colors">
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
         </div>
-        
-        {/* Expand/Collapse Icon */}
-        <button className="p-1 hover:bg-gray-800 rounded transition-colors">
-          {isExpanded ? (
-            <ChevronUp className="w-4 h-4 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          )}
-        </button>
-      </div>
       
       {/* Quick Stats Row */}
       <div className="flex items-center gap-4 text-xs mt-3">
@@ -288,5 +307,16 @@ function EnhancedOpportunityCard({ opportunity, index }: EnhancedOpportunityCard
         </div>
       )}
     </div>
+    
+    {/* Chart Dialog */}
+    {ticker && (
+      <StockChartDialog
+        symbol={ticker}
+        companyName={companyName}
+        isOpen={showChart}
+        onClose={() => setShowChart(false)}
+      />
+    )}
+    </>
   );
 }

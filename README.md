@@ -1,10 +1,10 @@
-# Signal - Geopolitical Event Intelligence Platform
+# ForeSight - Geopolitical Event Intelligence Platform
 
 An AI-powered real-time monitoring and analysis platform for geopolitical events and their market impacts. Built for the Perplexity Hackathon (Oct 17-18, 2025).
 
 ## What It Does
 
-Signal monitors global news for geopolitical events, uses AI to analyze potential market impacts, and provides real-time stock data with trading opportunities. It combines news aggregation, AI analysis (via Perplexity Sonar Pro), and live financial data (via Finnhub) to help traders, analysts, and researchers understand how world events affect markets.
+ForeSight monitors global news for geopolitical events, uses AI to analyze potential market impacts, and provides real-time stock data with trading opportunities. It combines news aggregation, AI analysis (via Perplexity Sonar Pro), and live financial data (via Finnhub) to help traders, analysts, and researchers understand how world events affect markets.
 
 ## Key Features
 

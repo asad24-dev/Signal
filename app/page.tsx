@@ -15,6 +15,7 @@ import { GlobalRiskMap, SAMPLE_LOCATIONS } from '@/components/GlobalRiskMap';
 import { ExpandableSummaryCard } from '@/components/ExpandableSummaryCard';
 import { Headline } from '@/lib/feeds/types';
 import { Asset, ImpactAnalysis } from '@/types';
+import { ExtractedLocation } from '@/types/finance';
 
 interface TimelineDataPoint {
   timestamp: Date;
@@ -51,10 +52,13 @@ export default function Dashboard() {
     oil?: string;
     semiconductors?: string;
   }>({});
+  
+  // Store extracted locations from AI analysis
+  const [extractedLocations, setExtractedLocations] = useState<ExtractedLocation[]>([]);
 
   // Load timeline data from localStorage on mount
   useEffect(() => {
-    const savedTimeline = localStorage.getItem('signal_timeline_data');
+    const savedTimeline = localStorage.getItem('foresight_timeline_data');
     if (savedTimeline) {
       try {
         const parsed = JSON.parse(savedTimeline);
@@ -75,7 +79,7 @@ export default function Dashboard() {
   // Save timeline data to localStorage whenever it changes
   useEffect(() => {
     if (timelineData.lithium.length > 0 || timelineData.oil.length > 0 || timelineData.semiconductors.length > 0) {
-      localStorage.setItem('signal_timeline_data', JSON.stringify(timelineData));
+      localStorage.setItem('foresight_timeline_data', JSON.stringify(timelineData));
     }
   }, [timelineData]);
 
@@ -110,6 +114,12 @@ export default function Dashboard() {
     console.log('📊 [PAGE] Processing batch analysis results:', signals.length, 'signals');
     console.log('📊 [PAGE] Signals data:', JSON.stringify(signals, null, 2));
     console.log('📊 [PAGE] Current assets:', assets.map(a => ({ id: a.id, score: a.currentRiskScore })));
+    
+    // Extract locations from analysis if available
+    if (signals.length > 0 && signals[0].locations) {
+      console.log('📍 [PAGE] Extracting locations from AI analysis:', signals[0].locations.length);
+      setExtractedLocations(signals[0].locations);
+    }
     
     // Update all affected assets at once
     const updatedAssets = [...assets];
@@ -297,7 +307,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
         <div className="text-center">
           <Activity className="w-12 h-12 text-cyan-400 mx-auto mb-4 animate-pulse" />
-          <p className="text-gray-400">Loading Signal...</p>
+          <p className="text-gray-400">Loading ForeSight...</p>
         </div>
       </div>
     );
@@ -309,12 +319,13 @@ export default function Dashboard() {
       <nav className="border-b border-gray-800 bg-[#0d1018]">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Abstract Logo - Hexagonal with center dot */}
-            <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-lg flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 3L19 7.5V16.5L12 21L5 16.5V7.5L12 3Z" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-                <circle cx="12" cy="12" r="2" fill="white"/>
-              </svg>
+            {/* ForeSight Logo */}
+            <div className="w-16 h-16 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="ForeSight Logo" 
+                className="w-16 h-16"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">FORESIGHT</h1>
@@ -390,9 +401,19 @@ export default function Dashboard() {
                 <div className="lg:col-span-2">
                   <h2 className="text-sm font-medium text-gray-400 mb-4">GLOBAL SUPPLY CHAIN</h2>
                   <GlobalRiskMap
-                    locations={SAMPLE_LOCATIONS}
+                    locations={extractedLocations.length > 0 ? extractedLocations : SAMPLE_LOCATIONS}
                     selectedAsset={selectedAssetId}
                   />
+                  {extractedLocations.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      ℹ️ Showing {extractedLocations.length} location{extractedLocations.length > 1 ? 's' : ''} extracted from news analysis
+                    </p>
+                  )}
+                  {extractedLocations.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      ℹ️ Run batch analysis to extract real locations from news
+                    </p>
+                  )}
                 </div>
 
                 {/* Risk Gauge - 1/3 width, centered */}
