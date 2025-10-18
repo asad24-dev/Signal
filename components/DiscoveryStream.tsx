@@ -19,6 +19,13 @@ export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamPr
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
   const [isLiveMode] = useState(true); // Always live mode
   const [newHeadlineIds, setNewHeadlineIds] = useState<Set<string>>(new Set());
+  
+  // Asset filter toggles
+  const [assetFilters, setAssetFilters] = useState({
+    lithium: false,
+    oil: false,
+    semiconductors: false
+  });
 
   // Auto-refresh in live mode
   useEffect(() => {
@@ -263,6 +270,40 @@ export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamPr
           </button>
         )}
         
+        {/* Asset Filter Tags */}
+        <div className="mt-2 flex items-center gap-1.5">
+          <button
+            onClick={() => setAssetFilters(prev => ({ ...prev, lithium: !prev.lithium }))}
+            className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+              assetFilters.lithium 
+                ? 'bg-blue-500 text-white shadow-md shadow-blue-500/50' 
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 border border-gray-700'
+            }`}
+          >
+            LITHIUM
+          </button>
+          <button
+            onClick={() => setAssetFilters(prev => ({ ...prev, oil: !prev.oil }))}
+            className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+              assetFilters.oil 
+                ? 'bg-amber-500 text-white shadow-md shadow-amber-500/50' 
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 border border-gray-700'
+            }`}
+          >
+            OIL
+          </button>
+          <button
+            onClick={() => setAssetFilters(prev => ({ ...prev, semiconductors: !prev.semiconductors }))}
+            className={`px-2.5 py-1 text-xs font-semibold rounded transition-all ${
+              assetFilters.semiconductors 
+                ? 'bg-purple-500 text-white shadow-md shadow-purple-500/50' 
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 border border-gray-700'
+            }`}
+          >
+            SEMICONDUCTORS
+          </button>
+        </div>
+        
         {/* Batch Analysis Loading State */}
         {isBatchAnalyzing && (
           <div className="mt-3 p-3 bg-gradient-to-br from-green-900/30 to-cyan-900/30 border border-green-500/50 rounded-lg">
@@ -300,15 +341,30 @@ export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamPr
           </div>
         ) : (
           <div className="p-2 space-y-2">
-            {headlines.map((headline) => (
-              <HeadlineCard
-                key={headline.id}
-                headline={headline}
-                isFlashing={flashingIds.has(headline.id)}
-                isNew={newHeadlineIds.has(headline.id)}
-                onAnalyze={onAnalyze}
-              />
-            ))}
+            {headlines
+              .filter(headline => {
+                // Check if any filters are active
+                const hasActiveFilters = Object.values(assetFilters).some(f => f);
+                
+                // If no filters active, show all headlines
+                if (!hasActiveFilters) return true;
+                
+                // Check if headline matches any active asset filter
+                if (assetFilters.lithium && headline.matchedAssets.includes('lithium')) return true;
+                if (assetFilters.oil && headline.matchedAssets.includes('oil')) return true;
+                if (assetFilters.semiconductors && headline.matchedAssets.includes('semiconductors')) return true;
+                
+                return false;
+              })
+              .map((headline) => (
+                <HeadlineCard
+                  key={headline.id}
+                  headline={headline}
+                  isFlashing={flashingIds.has(headline.id)}
+                  isNew={newHeadlineIds.has(headline.id)}
+                  onAnalyze={onAnalyze}
+                />
+              ))}
           </div>
         )}
       </div>
