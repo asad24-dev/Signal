@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Signal - Geopolitical Event Intelligence Platform
 
-## Getting Started
+An AI-powered real-time monitoring and analysis platform for geopolitical events and their market impacts. Built for the Perplexity Hackathon (Oct 17-18, 2025).
 
-First, run the development server:
+## What It Does
+
+Signal monitors global news for geopolitical events, uses AI to analyze potential market impacts, and provides real-time stock data with trading opportunities. It combines news aggregation, AI analysis (via Perplexity Sonar Pro), and live financial data (via Finnhub) to help traders, analysts, and researchers understand how world events affect markets.
+
+## Key Features
+
+- **News Monitoring**: Discovers geopolitical events from news sources
+- **AI Analysis**: Batch analysis using Perplexity Sonar Pro (Deep Research mode)
+- **Live Stock Data**: Real-time quotes and company profiles via Finnhub API
+- **Interactive Map**: Geographic visualization of global events
+- **Trading Opportunities**: AI-identified opportunities with live stock prices and company data
+
+## Quick Start
+
+### Installation
+
+```bash
+npm install
+```
+
+### Required API Keys
+
+1. **Perplexity API**: Get from [perplexity.ai](https://www.perplexity.ai/settings/api)
+2. **Finnhub API**: Get free tier from [finnhub.io](https://finnhub.io/register) (60 calls/min)
+
+### Environment Setup
+
+Create a `.env.local` file:
+
+```env
+# Required
+PERPLEXITY_API_KEY=your_perplexity_api_key
+FINNHUB_API_KEY=your_finnhub_api_key
+
+# Optional
+NEXT_PUBLIC_MAP_CENTER_LAT=20
+NEXT_PUBLIC_MAP_CENTER_LNG=0
+NEXT_PUBLIC_MAP_ZOOM=2
+```
+
+### Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How to Use
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Discover Events**: Click "Discover Events" to find geopolitical events from news
+2. **Batch Analysis**: Select events and run batch analysis with Perplexity Sonar Pro
+3. **Review Results**: View AI analysis, trading opportunities, and live stock data
+4. **Export**: Export results to JSON or CSV
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **AI**: Perplexity Sonar Pro (llama-3.1-sonar-large-128k-online)
+- **Financial Data**: Finnhub API (real-time stock quotes, company profiles)
+- **UI Components**: Radix UI, Lucide Icons
+- **Maps**: React-Leaflet, OpenStreetMap
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Troubleshooting
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Rate Limits
 
-## Deploy on Vercel
+- **Perplexity**: ~$0.035 per analysis (3 requests per event)
+- **Finnhub**: 60 API calls/min (free tier)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Common Issues
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **No trading opportunities**: Check that Finnhub API key is set correctly
+- **Rate limit errors**: Reduce batch size or wait between analyses
+- **TypeScript errors**: Run `npm run type-check` to see detailed errors
+
+## Project Structure
+
+```
+signal/
+├── app/              # Next.js app router pages
+├── components/       # React components
+├── lib/
+│   ├── finance/      # Finnhub API integration
+│   ├── perplexity/   # Perplexity API client
+│   └── utils/        # Utilities
+└── types/            # TypeScript types
+```
+
+## Development
+
+```bash
+npm run dev          # Start dev server
+npm run build        # Build for production
+npm run type-check   # Check TypeScript
+npm run lint         # Run ESLint
+```
+
+## License
+
+MIT
+
+---
+
+**Built for Perplexity Hackathon** | October 17-18, 2025
