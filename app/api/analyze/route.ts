@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAssetById } from "@/lib/data/assets";
 import { analyzeEventImpact } from "@/lib/perplexity/chat";
 import { calculateRiskScore } from "@/lib/risk/scorer";
+import { classifyEventType } from "@/lib/feeds/classifier";
 import type { RiskSignal, Event } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -54,9 +55,11 @@ export async function POST(request: NextRequest) {
         country: "Unknown",
         coordinates: [0, 0] as [number, number]
       },
-      eventType: "market_movement", // Default, could be improved with classification
+      eventType: classifyEventType(eventText), // ✅ AI-powered classification
       detectedAt: new Date()
     };
+    
+    console.log(`   Event type classified as: ${event.eventType}`);
     
     console.log("🤖 Calling Perplexity API for live analysis...");
     

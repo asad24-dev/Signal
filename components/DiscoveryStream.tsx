@@ -1,0 +1,343 @@
+// Discovery Stream - Left sidebar with live headline feed
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Headline } from '@/lib/feeds/types';
+import { Sparkles, AlertCircle, TrendingUp, Clock } from 'lucide-react';
+
+interface DiscoveryStreamProps {
+  onAnalyze?: (headline: Headline) => void;
+}
+
+export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
+  const [headlines, setHeadlines] = useState<Headline[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [lastScan, setLastScan] = useState<Date | null>(null);
+  const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [newHeadlineIds, setNewHeadlineIds] = useState<Set<string>>(new Set());
+
+  // Auto-refresh in live mode
+  useEffect(() => {
+    if (!isLiveMode) return;
+
+    const interval = setInterval(() => {
+      triggerScan(true); // Silent auto-scan
+    }, 60000); // Every 60 seconds
+    
+    return () => clearInterval(interval);
+  }, [isLiveMode]);
+
+  // Poll for updates every 10 seconds
+  useEffect(() => {
+    fetchHeadlines();
+    
+    const interval = setInterval(() => {
+      fetchHeadlines();
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchHeadlines = async () => {
+    try {
+      const response = await fetch('/api/feeds/stream');
+      const data = await response.json();
+      
+      if (data.success) {
+        const existingIds = new Set(headlines.map(h => h.id));
+        const incoming = data.headlines || [];
+        
+        // Mark new headlines
+        const newIds = new Set<string>(
+          incoming
+            .filter((h: Headline) => !existingIds.has(h.id))
+            .map((h: Headline) => h.id)
+        );
+        
+        if (newIds.size > 0) {
+          setNewHeadlineIds(newIds);
+          // Clear "NEW" badge after 10 seconds
+          setTimeout(() => setNewHeadlineIds(new Set()), 10000);
+        }
+        
+        // Flash signals
+        const signalIds = incoming
+          .filter((h: Headline) => h.triageStatus === 'flagged' && newIds.has(h.id))
+          .map((h: Headline) => h.id);
+        
+        if (signalIds.length > 0) {
+          setFlashingIds(new Set(signalIds));
+          setTimeout(() => setFlashingIds(new Set()), 3000);
+        }
+        
+        // Sort: chronological (newest first) in live mode, by confidence otherwise
+        const sorted = isLiveMode
+          ? [...incoming].sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+          : [...incoming].sort((a, b) => b.confidence - a.confidence);
+        
+        setHeadlines(sorted);
+        if (data.lastScan) {
+          setLastScan(new Date(data.lastScan));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch headlines:', error);
+    }
+  };
+
+  const triggerScan = async (silent = false) => {
+    if (!silent) setIsScanning(true);
+    
+    const scanParams = {
+      mode: 'auto', // Try real RSS first, fallback to mock
+      enableAI: false, // Start with just keyword triage
+      usePerplexity: isLiveMode // Use Perplexity discovery in live mode
+    };
+    
+    console.log('🔍 [CLIENT] Triggering scan with params:', scanParams);
+    
+    try {
+      const response = await fetch('/api/feeds/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scanParams)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setHeadlines(data.headlines);
+        setLastScan(new Date());
+        
+        // Flash signals
+        const signalIds = data.signals.map((s: Headline) => s.id);
+        setFlashingIds(new Set(signalIds));
+        setTimeout(() => setFlashingIds(new Set()), 3000);
+      }
+    } catch (error) {
+      console.error('Scan failed:', error);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const signalsCount = headlines.filter(h => h.triageStatus === 'flagged').length;
+
+  return (
+    <div className="flex flex-col h-full bg-[#0a0e1a] border-r border-gray-800">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-800">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-cyan-400" />
+            Discovery Stream
+          </h2>
+          <div className="flex items-center gap-2">
+            {lastScan && (
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatTimeAgo(lastScan)}
+              </span>
+            )}
+            <div className={`w-2 h-2 rounded-full ${isLiveMode ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+          </div>
+        </div>
+        
+        {/* Live Mode Toggle */}
+        <div className="mb-3 flex items-center gap-2 p-2 bg-gray-900/50 rounded-lg">
+          <button
+            onClick={() => setIsLiveMode(false)}
+            className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              !isLiveMode 
+                ? 'bg-cyan-600 text-white' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Manual
+          </button>
+          <button
+            onClick={() => setIsLiveMode(true)}
+            className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              isLiveMode 
+                ? 'bg-green-600 text-white' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            🔴 Live
+          </button>
+        </div>
+        
+        {/* Perplexity Discovery Status */}
+        {isLiveMode && (
+          <div className="mb-3 p-2 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+              <span className="text-xs text-purple-300 font-medium">
+                Perplexity Discovery Active
+              </span>
+            </div>
+            <p className="text-xs text-purple-400/60 mt-1">
+              AI-powered web search for breaking signals
+            </p>
+          </div>
+        )}
+        
+        <button
+          onClick={() => triggerScan(false)}
+          disabled={isScanning || isLiveMode}
+          className="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          {isScanning ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Scanning...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              SCAN FEEDS NOW
+            </>
+          )}
+        </button>
+        
+        <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+          <span>{headlines.length} headlines</span>
+          <span className="text-cyan-400 font-medium">{signalsCount} signals</span>
+        </div>
+      </div>
+
+      {/* Headlines List */}
+      <div className="flex-1 overflow-y-auto">
+        {headlines.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm">No headlines yet</p>
+            <p className="text-xs mt-1">Click "SCAN FEEDS NOW" to start</p>
+          </div>
+        ) : (
+          <div className="p-2 space-y-2">
+            {headlines.map((headline) => (
+              <HeadlineCard
+                key={headline.id}
+                headline={headline}
+                isFlashing={flashingIds.has(headline.id)}
+                isNew={newHeadlineIds.has(headline.id)}
+                onAnalyze={onAnalyze}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface HeadlineItemProps {
+  headline: Headline;
+  isFlashing: boolean;
+  isNew?: boolean;
+  onAnalyze?: (headline: Headline) => void;
+}
+
+function HeadlineCard({ headline, isFlashing, isNew, onAnalyze }: HeadlineItemProps) {
+  const isSignal = headline.triageStatus === 'flagged';
+  const isPerplexity = headline.id.startsWith('perplexity-');
+  
+  return (
+    <div
+      className={`
+        p-3 rounded-lg transition-all duration-300 cursor-pointer
+        ${isSignal 
+          ? 'bg-green-900/20 border-2 border-green-500/50 hover:border-green-500' 
+          : 'bg-gray-900/50 border border-gray-800 hover:border-gray-700'}
+        ${isFlashing ? 'animate-pulse ring-2 ring-green-500' : ''}
+        ${isPerplexity ? 'ring-1 ring-purple-500/30' : ''}
+      `}
+    >
+      {/* Signal Badge */}
+      {isSignal && (
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <span className="px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
+            POTENTIAL SIGNAL
+          </span>
+          {headline.matchedAssets.length > 0 && (
+            <span className="px-2 py-0.5 bg-cyan-900 text-cyan-300 text-xs font-medium rounded uppercase">
+              {headline.matchedAssets[0]}
+            </span>
+          )}
+          {isPerplexity && (
+            <span className="px-2 py-0.5 bg-purple-600 text-white text-xs font-bold rounded">
+              ⚡ AI
+            </span>
+          )}
+          {isNew && (
+            <span className="px-2 py-0.5 bg-green-600 text-white text-xs font-bold rounded animate-pulse">
+              NEW
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Headline */}
+      <h3 className={`text-sm font-medium mb-1 ${isSignal ? 'text-white' : 'text-gray-400'}`}>
+        {headline.title}
+      </h3>
+
+      {/* Meta */}
+      <div className="flex items-center justify-between text-xs">
+        <span className={isSignal ? 'text-gray-300' : 'text-gray-500'}>
+          {headline.source}
+        </span>
+        <span className={isSignal ? 'text-gray-400' : 'text-gray-600'}>
+          {formatTimeAgo(new Date(headline.publishedAt))}
+        </span>
+      </div>
+
+      {/* Confidence & Keywords */}
+      {isSignal && headline.confidence > 0 && (
+        <div className="mt-2 pt-2 border-t border-green-900/30">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-400">Confidence</span>
+            <span className="text-xs font-bold text-green-400">
+              {Math.round(headline.confidence * 100)}%
+            </span>
+          </div>
+          {headline.matchedKeywords.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {headline.matchedKeywords.slice(0, 4).map((keyword, i) => (
+                <span
+                  key={i}
+                  className="px-1.5 py-0.5 bg-gray-800 text-gray-300 text-xs rounded"
+                >
+                  {keyword}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      {isSignal && onAnalyze && (
+        <button
+          onClick={() => onAnalyze(headline)}
+          className="mt-3 w-full px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors"
+        >
+          ANALYZE THIS
+        </button>
+      )}
+    </div>
+  );
+}
+
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
