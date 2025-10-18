@@ -171,13 +171,16 @@ function OpportunityCard({ opportunity, index, onClick }: OpportunityCardProps) 
           <span className="text-xs text-gray-500">#{index + 1}</span>
         </div>
         
-        {/* ROI Badge */}
-        {opportunity.potentialReturn !== undefined && (
-          <div className="flex items-center gap-1">
-            <DollarSign className={`w-4 h-4 ${config.color}`} />
-            <span className={`text-sm font-bold ${config.color}`}>
-              {opportunity.potentialReturn > 0 ? '+' : ''}{opportunity.potentialReturn.toFixed(1)}%
-            </span>
+        {/* Stock Performance Badge - Shows ACTUAL current movement */}
+        {opportunity.company?.changePercent !== undefined && (
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1">
+              <DollarSign className={`w-4 h-4 ${opportunity.company.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`} />
+              <span className={`text-sm font-bold ${opportunity.company.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {opportunity.company.changePercent > 0 ? '+' : ''}{opportunity.company.changePercent.toFixed(2)}%
+              </span>
+            </div>
+            <span className="text-[10px] text-gray-500">Current Move</span>
           </div>
         )}
       </div>

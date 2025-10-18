@@ -160,6 +160,7 @@ export interface Opportunity {
     ticker: string;
     sector?: string;
     currentPrice?: number;
+    changePercent?: number;
   };
   confidence?: number;
 }

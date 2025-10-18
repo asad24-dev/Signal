@@ -661,7 +661,8 @@ async function enrichOpportunitiesWithRealData(opportunities: any[]): Promise<an
             name: stockData.name || ticker,
             ticker: ticker,
             sector: stockData.sector || 'Unknown',
-            currentPrice: stockData.price
+            currentPrice: stockData.price,
+            changePercent: stockData.changePercent
           },
           correlation: {
             symbol: ticker,
