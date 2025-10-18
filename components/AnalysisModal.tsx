@@ -180,11 +180,11 @@ export function AnalysisModal({ headline, isOpen, onClose, onConfirm }: Analysis
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-400">Progress</span>
-                  <span className="text-sm font-medium text-cyan-400">{Math.round(progress)}%</span>
+                  <span className="text-sm font-medium text-red-400">{Math.round(progress)}%</span>
                 </div>
                 <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
                   <div
-                    className="h-2 bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500 ease-out"
+                    className="h-2 bg-gradient-to-r from-red-500 to-red-700 transition-all duration-500 ease-out"
                     style={{ width: `${progress}%` }}
                   />
                 </div>

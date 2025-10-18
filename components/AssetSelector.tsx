@@ -36,6 +36,49 @@ interface AssetCardProps {
 function AssetCard({ asset, isSelected, onSelect }: AssetCardProps) {
   const Icon = getAssetIcon(asset.id);
   const level = getRiskLevel(asset.currentRiskScore);
+  
+  // Get dynamic colors based on risk score
+  const getScoreColor = (score: number) => {
+    if (score < 3) {
+      return {
+        border: 'border-green-500',
+        shadow: 'shadow-green-500/20',
+        bg: 'from-green-900/50 to-green-950/50',
+        indicator: 'bg-green-500',
+        iconBg: 'bg-green-500/20',
+        iconColor: 'text-green-400'
+      };
+    } else if (score < 5) {
+      return {
+        border: 'border-yellow-500',
+        shadow: 'shadow-yellow-500/20',
+        bg: 'from-yellow-900/50 to-yellow-950/50',
+        indicator: 'bg-yellow-500',
+        iconBg: 'bg-yellow-500/20',
+        iconColor: 'text-yellow-400'
+      };
+    } else if (score < 7) {
+      return {
+        border: 'border-orange-500',
+        shadow: 'shadow-orange-500/20',
+        bg: 'from-orange-900/50 to-orange-950/50',
+        indicator: 'bg-orange-500',
+        iconBg: 'bg-orange-500/20',
+        iconColor: 'text-orange-400'
+      };
+    } else {
+      return {
+        border: 'border-red-500',
+        shadow: 'shadow-red-500/20',
+        bg: 'from-red-900/50 to-red-950/50',
+        indicator: 'bg-red-500',
+        iconBg: 'bg-red-500/20',
+        iconColor: 'text-red-400'
+      };
+    }
+  };
+  
+  const colors = getScoreColor(asset.currentRiskScore);
 
   return (
     <button
@@ -43,22 +86,22 @@ function AssetCard({ asset, isSelected, onSelect }: AssetCardProps) {
       className={`
         relative p-6 rounded-xl transition-all duration-300 text-left
         ${isSelected 
-          ? 'bg-gradient-to-br from-cyan-900/50 to-blue-900/50 border-2 border-cyan-500 shadow-lg shadow-cyan-500/20 scale-105' 
+          ? `bg-gradient-to-br ${colors.bg} border-2 ${colors.border} shadow-lg ${colors.shadow} scale-105` 
           : 'bg-gray-900/50 border-2 border-gray-800 hover:border-gray-700 hover:bg-gray-900/70'}
       `}
     >
       {/* Selected Indicator */}
       {isSelected && (
-        <div className="absolute top-3 right-3 w-3 h-3 bg-cyan-500 rounded-full animate-pulse" />
+        <div className={`absolute top-3 right-3 w-3 h-3 ${colors.indicator} rounded-full animate-pulse`} />
       )}
 
       {/* Icon & Name */}
       <div className="flex items-start gap-4 mb-4">
         <div className={`
           p-3 rounded-lg
-          ${isSelected ? 'bg-cyan-500/20' : 'bg-gray-800'}
+          ${isSelected ? colors.iconBg : 'bg-gray-800'}
         `}>
-          <Icon className={`w-6 h-6 ${isSelected ? 'text-cyan-400' : 'text-gray-400'}`} />
+          <Icon className={`w-6 h-6 ${isSelected ? colors.iconColor : 'text-gray-400'}`} />
         </div>
         <div className="flex-1">
           <h3 className={`font-semibold mb-1 ${isSelected ? 'text-white' : 'text-gray-300'}`}>
@@ -121,7 +164,7 @@ function AssetCard({ asset, isSelected, onSelect }: AssetCardProps) {
 
       {/* Hover Effect */}
       {!isSelected && (
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-cyan-500/0 to-blue-500/0 hover:from-cyan-500/5 hover:to-blue-500/5 transition-all duration-300" />
+        <div className={`absolute inset-0 rounded-xl bg-gradient-to-br from-gray-500/0 to-gray-600/0 hover:from-gray-500/5 hover:to-gray-600/5 transition-all duration-300`} />
       )}
     </button>
   );
