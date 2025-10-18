@@ -9,8 +9,21 @@ import { RiskGauge } from '@/components/RiskGauge';
 import { AssetSelector } from '@/components/AssetSelector';
 import { ImpactCascade } from '@/components/ImpactCascade';
 import { AnalysisModal } from '@/components/AnalysisModal';
+import { TimelineChart } from '@/components/TimelineChart';
+import { TradingOpportunities } from '@/components/TradingOpportunities';
+import { GlobalRiskMap, SAMPLE_LOCATIONS } from '@/components/GlobalRiskMap';
+import { ExpandableSummaryCard } from '@/components/ExpandableSummaryCard';
 import { Headline } from '@/lib/feeds/types';
 import { Asset, ImpactAnalysis } from '@/types';
+
+interface TimelineDataPoint {
+  timestamp: Date;
+  riskScore: number;
+  event?: {
+    title: string;
+    type: string;
+  };
+}
 
 export default function Dashboard() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -19,6 +32,51 @@ export default function Dashboard() {
   const [selectedHeadline, setSelectedHeadline] = useState<Headline | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Timeline data for each asset
+  const [timelineData, setTimelineData] = useState<{
+    lithium: TimelineDataPoint[];
+    oil: TimelineDataPoint[];
+    semiconductors: TimelineDataPoint[];
+  }>({
+    lithium: [],
+    oil: [],
+    semiconductors: []
+  });
+  
+  // Store asset-specific analysis summaries
+  const [assetSummaries, setAssetSummaries] = useState<{
+    lithium?: string;
+    oil?: string;
+    semiconductors?: string;
+  }>({});
+
+  // Load timeline data from localStorage on mount
+  useEffect(() => {
+    const savedTimeline = localStorage.getItem('signal_timeline_data');
+    if (savedTimeline) {
+      try {
+        const parsed = JSON.parse(savedTimeline);
+        // Convert timestamp strings back to Date objects
+        Object.keys(parsed).forEach(key => {
+          parsed[key] = parsed[key].map((point: any) => ({
+            ...point,
+            timestamp: new Date(point.timestamp)
+          }));
+        });
+        setTimelineData(parsed);
+      } catch (error) {
+        console.error('Failed to load timeline data:', error);
+      }
+    }
+  }, []);
+
+  // Save timeline data to localStorage whenever it changes
+  useEffect(() => {
+    if (timelineData.lithium.length > 0 || timelineData.oil.length > 0 || timelineData.semiconductors.length > 0) {
+      localStorage.setItem('signal_timeline_data', JSON.stringify(timelineData));
+    }
+  }, [timelineData]);
 
   // Fetch assets on mount
   useEffect(() => {
@@ -44,6 +102,78 @@ export default function Dashboard() {
   const handleAnalyzeHeadline = (headline: Headline) => {
     setSelectedHeadline(headline);
     setIsModalOpen(true);
+  };
+
+  // Handler for batch analysis results (called by DiscoveryStream)
+  const handleBatchAnalysisResult = (signals: any[]) => {
+    console.log('📊 [PAGE] Processing batch analysis results:', signals.length, 'signals');
+    console.log('📊 [PAGE] Signals data:', JSON.stringify(signals, null, 2));
+    console.log('📊 [PAGE] Current assets:', assets.map(a => ({ id: a.id, score: a.currentRiskScore })));
+    
+    // Update all affected assets at once
+    const updatedAssets = [...assets];
+    const timelineUpdates: any = { ...timelineData };
+    
+    signals.forEach((signal, index) => {
+      console.log(`🔄 [PAGE] Processing signal ${index + 1}:`, {
+        assetId: signal.assetId,
+        riskScore: signal.riskScore,
+        riskLevel: signal.riskLevel,
+        hasAnalysis: !!signal.analysis
+      });
+      
+      const assetIndex = updatedAssets.findIndex(a => a.id === signal.assetId);
+      console.log(`🔍 [PAGE] Asset index for ${signal.assetId}:`, assetIndex);
+      
+      if (assetIndex !== -1) {
+        console.log(`✅ [PAGE] Updating ${signal.assetId}: ${updatedAssets[assetIndex].currentRiskScore} → ${signal.riskScore}`);
+        updatedAssets[assetIndex] = {
+          ...updatedAssets[assetIndex],
+          currentRiskScore: signal.riskScore,
+          riskLevel: signal.riskLevel
+        };
+        
+        // Add to timeline
+        const assetKey = signal.assetId as 'lithium' | 'oil' | 'semiconductors';
+        if (assetKey in timelineUpdates) {
+          timelineUpdates[assetKey] = [
+            ...timelineUpdates[assetKey],
+            {
+              timestamp: new Date(),
+              riskScore: signal.riskScore,
+              event: {
+                title: signal.event.title,
+                type: signal.event.eventType
+              }
+            }
+          ];
+          console.log(`📈 [PAGE] Added timeline point for ${assetKey}:`, signal.riskScore);
+        }
+      } else {
+        console.warn(`⚠️ [PAGE] Asset not found:`, signal.assetId);
+      }
+    });
+    
+    console.log('🔄 [PAGE] Setting updated assets:', updatedAssets.map(a => ({ id: a.id, score: a.currentRiskScore })));
+    setAssets(updatedAssets);
+    setTimelineData(timelineUpdates);
+    
+    // Store asset summaries
+    const summaries: any = {};
+    signals.forEach((signal) => {
+      const assetKey = signal.assetId as 'lithium' | 'oil' | 'semiconductors';
+      if (assetKey in summaries || assetKey === 'lithium' || assetKey === 'oil' || assetKey === 'semiconductors') {
+        summaries[assetKey] = signal.analysis?.summary || signal.event?.description || 'Analysis completed';
+      }
+    });
+    setAssetSummaries(summaries);
+    console.log('📝 [PAGE] Asset summaries:', summaries);
+    
+    // Set the first signal as current analysis (to show opportunities)
+    if (signals.length > 0) {
+      console.log('📊 [PAGE] Setting current analysis to first signal:', signals[0].assetId);
+      setCurrentAnalysis(signals[0].analysis);
+    }
   };
 
   const handleConfirmAnalysis = async (headline: Headline) => {
@@ -84,6 +214,25 @@ export default function Dashboard() {
             : asset
         );
         setAssets(updatedAssets);
+        
+        // Add to timeline data
+        const assetKey = signal.assetId as 'lithium' | 'oil' | 'semiconductors';
+        if (assetKey in timelineData) {
+          setTimelineData(prev => ({
+            ...prev,
+            [assetKey]: [
+              ...prev[assetKey],
+              {
+                timestamp: new Date(),
+                riskScore: after.value,
+                event: {
+                  title: signal.event.title,
+                  type: signal.event.eventType
+                }
+              }
+            ]
+          }));
+        }
       }
     } catch (error) {
       console.error('Analysis failed:', error);
@@ -118,6 +267,22 @@ export default function Dashboard() {
             : asset
         );
         setAssets(updatedAssets);
+        
+        // Add to timeline data
+        setTimelineData(prev => ({
+          ...prev,
+          lithium: [
+            ...prev.lithium,
+            {
+              timestamp: new Date(),
+              riskScore: after.value,
+              event: {
+                title: signal.event.title,
+                type: signal.event.eventType
+              }
+            }
+          ]
+        }));
       }
     } catch (error) {
       console.error('Demo injection failed:', error);
@@ -172,7 +337,10 @@ export default function Dashboard() {
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Sidebar - Discovery Stream */}
         <div className="w-80 flex-shrink-0">
-          <DiscoveryStream onAnalyze={handleAnalyzeHeadline} />
+          <DiscoveryStream 
+            onAnalyze={handleAnalyzeHeadline}
+            onBatchAnalyze={handleBatchAnalysisResult}
+          />
         </div>
 
         {/* Main Content */}
@@ -186,6 +354,25 @@ export default function Dashboard() {
                 selectedAssetId={selectedAssetId}
                 onSelect={setSelectedAssetId}
               />
+              
+              {/* Asset Analysis Summaries */}
+              {(assetSummaries.lithium || assetSummaries.oil || assetSummaries.semiconductors) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  {assets.map((asset) => {
+                    const assetKey = asset.id as 'lithium' | 'oil' | 'semiconductors';
+                    const summary = assetSummaries[assetKey];
+                    if (!summary) return null;
+                    
+                    return (
+                      <ExpandableSummaryCard
+                        key={asset.id}
+                        assetName={asset.name}
+                        summary={summary}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Risk Gauge - Hero Element */}
@@ -206,6 +393,57 @@ export default function Dashboard() {
                 <ImpactCascade analysis={currentAnalysis} animated={true} />
               </div>
             )}
+
+            {/* Timeline Charts - Show history for all 3 assets */}
+            <div className="mt-8">
+              <h2 className="text-sm font-medium text-gray-400 mb-4">RISK TIMELINE</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <TimelineChart
+                  assetId="lithium"
+                  assetName="Lithium"
+                  data={timelineData.lithium}
+                  currentScore={assets.find(a => a.id === 'lithium')?.currentRiskScore || 0}
+                  riskLevel={assets.find(a => a.id === 'lithium')?.riskLevel || 'low'}
+                />
+                <TimelineChart
+                  assetId="oil"
+                  assetName="Crude Oil"
+                  data={timelineData.oil}
+                  currentScore={assets.find(a => a.id === 'oil')?.currentRiskScore || 0}
+                  riskLevel={assets.find(a => a.id === 'oil')?.riskLevel || 'low'}
+                />
+                <TimelineChart
+                  assetId="semiconductors"
+                  assetName="Semiconductors"
+                  data={timelineData.semiconductors}
+                  currentScore={assets.find(a => a.id === 'semiconductors')?.currentRiskScore || 0}
+                  riskLevel={assets.find(a => a.id === 'semiconductors')?.riskLevel || 'low'}
+                />
+              </div>
+            </div>
+
+            {/* Trading Opportunities & Global Risk Map */}
+            <div className="mt-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Trading Opportunities Panel */}
+                <div>
+                  <h2 className="text-sm font-medium text-gray-400 mb-4">TRADING OPPORTUNITIES</h2>
+                  <TradingOpportunities
+                    opportunities={currentAnalysis?.opportunities || []}
+                    assetName="Cross-Asset Analysis"
+                  />
+                </div>
+
+                {/* Global Risk Map */}
+                <div>
+                  <h2 className="text-sm font-medium text-gray-400 mb-4">GLOBAL SUPPLY CHAIN</h2>
+                  <GlobalRiskMap
+                    locations={SAMPLE_LOCATIONS}
+                    selectedAsset={selectedAssetId}
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Empty State */}
             {!currentAnalysis && (

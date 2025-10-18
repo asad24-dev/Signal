@@ -8,11 +8,13 @@ import { Sparkles, AlertCircle, TrendingUp, Clock } from 'lucide-react';
 
 interface DiscoveryStreamProps {
   onAnalyze?: (headline: Headline) => void;
+  onBatchAnalyze?: (signals: any[]) => void;
 }
 
-export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
+export function DiscoveryStream({ onAnalyze, onBatchAnalyze }: DiscoveryStreamProps) {
   const [headlines, setHeadlines] = useState<Headline[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
   const [lastScan, setLastScan] = useState<Date | null>(null);
   const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -25,10 +27,10 @@ export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
     // Trigger immediate scan when entering live mode
     triggerScan(false); // Show loading UI
     
-    // Then auto-scan every 60 seconds
+    // Then auto-scan every 10 minutes (600 seconds)
     const interval = setInterval(() => {
       triggerScan(true); // Silent auto-scan
-    }, 60000); // Every 60 seconds
+    }, 600000); // 10 minutes
     
     return () => clearInterval(interval);
   }, [isLiveMode]);
@@ -132,6 +134,55 @@ export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
     }
   };
 
+  const triggerBatchAnalysis = async () => {
+    const flaggedHeadlines = headlines.filter(h => h.triageStatus === 'flagged');
+    
+    if (flaggedHeadlines.length === 0) {
+      console.log('⚠️ No flagged headlines to analyze');
+      return;
+    }
+    
+    setIsBatchAnalyzing(true);
+    
+    try {
+      console.log(`🎯 [CLIENT] Triggering batch analysis for ${flaggedHeadlines.length} headlines`);
+      
+      const response = await fetch('/api/analyze-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headlines: flaggedHeadlines })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log(`✅ Batch analysis complete! Updated ${data.signals.length} assets`);
+        console.log('📊 Signals:', data.signals);
+        
+        // Notify parent component about ALL signals at once
+        if (onBatchAnalyze && data.signals.length > 0) {
+          onBatchAnalyze(data.signals);
+          console.log('🎉 All assets updated with batch analysis via onBatchAnalyze!');
+        } else {
+          console.warn('⚠️ No onBatchAnalyze callback provided or no signals returned');
+        }
+        
+        // Mark headlines as analyzed
+        setHeadlines(prev => 
+          prev.map(h => 
+            flaggedHeadlines.some(fh => fh.id === h.id)
+              ? { ...h, triageStatus: 'analyzed' as const }
+              : h
+          )
+        );
+      }
+    } catch (error) {
+      console.error('❌ Batch analysis failed:', error);
+    } finally {
+      setIsBatchAnalyzing(false);
+    }
+  };
+
   const signalsCount = headlines.filter(h => h.triageStatus === 'flagged').length;
 
   return (
@@ -232,6 +283,50 @@ export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
             </>
           )}
         </button>
+        
+        {/* Batch Analysis Button */}
+        {signalsCount > 0 && (
+          <button
+            onClick={triggerBatchAnalysis}
+            disabled={isBatchAnalyzing}
+            className="mt-3 w-full px-4 py-2 bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            {isBatchAnalyzing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm">
+                  Analyzing {signalsCount} signals<span className="animate-pulse">...</span>
+                </span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                <span>ANALYZE ALL {signalsCount} SIGNALS</span>
+              </>
+            )}
+          </button>
+        )}
+        
+        {/* Batch Analysis Loading State */}
+        {isBatchAnalyzing && (
+          <div className="mt-3 p-3 bg-gradient-to-br from-green-900/30 to-cyan-900/30 border border-green-500/50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-green-200 font-semibold">
+                🎯 Holistic Analysis in Progress
+              </span>
+            </div>
+            <p className="text-xs text-green-300/80 mb-2">
+              Perplexity is analyzing all signals together with cross-asset impact consideration...
+            </p>
+            <div className="flex items-center gap-1">
+              <div className="flex-1 h-1 bg-green-950 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-green-500 to-cyan-500 animate-shimmer" />
+              </div>
+              <span className="text-xs text-green-400">30-45s</span>
+            </div>
+          </div>
+        )}
         
         <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
           <span>{headlines.length} headlines</span>
@@ -351,15 +446,7 @@ function HeadlineCard({ headline, isFlashing, isNew, onAnalyze }: HeadlineItemPr
         </div>
       )}
 
-      {/* Action Buttons */}
-      {isSignal && onAnalyze && (
-        <button
-          onClick={() => onAnalyze(headline)}
-          className="mt-3 w-full px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors"
-        >
-          ANALYZE THIS
-        </button>
-      )}
+      {/* Individual analysis removed - use batch analysis instead */}
     </div>
   );
 }
