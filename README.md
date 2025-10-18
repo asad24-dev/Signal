@@ -1,8 +1,8 @@
 An AI-powered platform that monitors global geopolitical events and analyzes their potential impact on financial markets using real-time news analysis and stock market data.
 
-**Live Demo:** [Add deployment URL here]
+**Live Demo:** https://signal-xfed.onrender.com/
 
-**Demo Video:** [Add video link here]
+**Demo Video:** https://youtu.be/6NOsOO-6VPc
 
 ## Overview
 
@@ -19,13 +19,13 @@ ForeSight combines AI-powered news analysis with real-time financial data to hel
 
 ### Usage
 
-The Perplexity API is integrated through the Sonar Pro model (`llama-3.1-sonar-large-128k-online`) and serves as the core intelligence engine for the platform.
+The Perplexity API is integrated through the Sonar Pro model and serves as the core intelligence engine for the platform.
 
 ### Implementation
 
 **Location**: `lib/perplexity/batch-chat.ts`
 
-**Model**: `llama-3.1-sonar-large-128k-online` (Sonar Pro)
+**Model**: Sonar Pro
 
 **Purpose**: 
 - Analyzes geopolitical events from news headlines
@@ -87,8 +87,7 @@ The Perplexity API returns:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/asad24-dev/Signal.git
-cd Signal
+git clone https://github.com/asad24-dev/ForeSight.git
 ```
 
 2. Install dependencies:
