@@ -138,12 +138,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white">
+    <div className="min-h-screen bg-[#080a12] text-white">
       {/* Top Navigation */}
-      <nav className="border-b border-gray-800 bg-[#121827]">
+      <nav className="border-b border-gray-800 bg-[#0d1018]">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-lg flex items-center justify-center">
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -156,7 +156,7 @@ export default function Dashboard() {
             <button
               onClick={handleInjectDemo}
               disabled={isLoading}
-              className="px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:from-gray-700 disabled:to-gray-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 shadow-lg"
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-700 disabled:to-gray-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 shadow-lg"
             >
               <Sparkles className="w-4 h-4" />
               INJECT EVENT
