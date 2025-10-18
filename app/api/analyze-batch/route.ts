@@ -8,6 +8,10 @@ import { scoreToLevel } from "@/lib/risk/scorer";
 import type { Headline } from "@/lib/feeds/types";
 import type { RiskSignal } from "@/types";
 
+// IMPORTANT: Deep Research can take 5-10 minutes
+// Increase timeout to 10 minutes (600 seconds)
+export const maxDuration = 600; // Maximum timeout for Deep Research
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
@@ -67,10 +71,25 @@ export async function POST(request: NextRequest) {
     console.log(`   Oil: ${oilHeadlines.length} headlines`);
     console.log(`   Semiconductors: ${semiconductorHeadlines.length} headlines`);
     
-    console.log("🤖 Calling Perplexity API for holistic batch analysis...");
+    // Determine which model to use based on environment or request
+    // Deep Research: $5-10 per call, 3-5 minutes, better analysis
+    // Sonar Pro: $0.035 per call, 10-30 seconds, faster
+    const useDeepResearch = process.env.USE_DEEP_RESEARCH === 'true' || false;
     
-    // LIVE PERPLEXITY BATCH ANALYSIS
-    // This analyzes ALL headlines together with cross-asset impact consideration
+    if (useDeepResearch) {
+      console.log("🚀 Using Sonar Deep Research (intelligent stock discovery)");
+      console.log("   ⏱️  This will take 3-5 minutes...");
+    } else {
+      console.log("🤖 Using Sonar Pro with Alpha Vantage stock enrichment");
+      console.log("   ⚡ Fast analysis + real stock data validation");
+    }
+    
+    console.log("🤖 Calling Perplexity for batch analysis...");
+    
+    // ENHANCED: Sonar Pro + Alpha Vantage = Best of both worlds
+    // - Sonar Pro: Fast web intelligence, discovers stock correlations
+    // - Alpha Vantage: Real-time stock data validation
+    // - Stock discovery ALWAYS enabled for intelligent recommendations
     const batchAnalysis = await analyzeBatchImpact(
       {
         lithium: { asset: lithium, headlines: lithiumHeadlines },
@@ -78,8 +97,9 @@ export async function POST(request: NextRequest) {
         semiconductors: { asset: semiconductors, headlines: semiconductorHeadlines }
       },
       {
-        model: "sonar-pro",
-        searchType: "pro"
+        model: useDeepResearch ? "sonar-deep-research" : "sonar-pro",
+        searchType: useDeepResearch ? "deep" : "pro",
+        useStockDiscovery: true // ALWAYS enable - works with both models!
       }
     );
     
