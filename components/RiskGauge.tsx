@@ -168,10 +168,10 @@ export function RiskGauge({
         <div className="mt-6 w-full max-w-xs">
           <div className="text-xs text-gray-400 mb-2">Risk Components</div>
           <div className="space-y-2">
-            <ComponentBar label="Supply Disruption" value={displayScore * 0.35} max={10} color={level.color} />
-            <ComponentBar label="Market Sentiment" value={displayScore * 0.25} max={10} color={level.color} />
-            <ComponentBar label="Company Exposure" value={displayScore * 0.28} max={10} color={level.color} />
-            <ComponentBar label="Geopolitical" value={displayScore * 0.12} max={10} color={level.color} />
+            <ComponentBar label="Supply Disruption" value={displayScore * 0.35} max={displayScore} color={level.color} />
+            <ComponentBar label="Market Sentiment" value={displayScore * 0.25} max={displayScore} color={level.color} />
+            <ComponentBar label="Company Exposure" value={displayScore * 0.28} max={displayScore} color={level.color} />
+            <ComponentBar label="Geopolitical" value={displayScore * 0.12} max={displayScore} color={level.color} />
           </div>
         </div>
       )}

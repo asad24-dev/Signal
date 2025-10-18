@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Activity, Sparkles } from 'lucide-react';
+import { Activity, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DiscoveryStream } from '@/components/DiscoveryStream';
 import { RiskGauge } from '@/components/RiskGauge';
 import { AssetSelector } from '@/components/AssetSelector';
@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [selectedHeadline, setSelectedHeadline] = useState<Headline | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // Timeline data for each asset
   const [timelineData, setTimelineData] = useState<{
@@ -308,25 +309,20 @@ export default function Dashboard() {
       <nav className="border-b border-gray-800 bg-[#0d1018]">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* Abstract Logo - Hexagonal with center dot */}
             <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-lg flex items-center justify-center">
-              <Activity className="w-6 h-6 text-white" />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3L19 7.5V16.5L12 21L5 16.5V7.5L12 3Z" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="2" fill="white"/>
+              </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">SIGNAL</h1>
-              <p className="text-xs text-gray-400">AI Geopolitical Risk Arbiter</p>
+              <h1 className="text-xl font-bold text-white">FORESIGHT</h1>
+              <p className="text-xs text-gray-400">AI Geopolitical Risk Intelligence</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleInjectDemo}
-              disabled={isLoading}
-              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-700 disabled:to-gray-700 text-white rounded-lg font-medium transition-all flex items-center gap-2 shadow-lg"
-            >
-              <Sparkles className="w-4 h-4" />
-              INJECT EVENT
-            </button>
-            
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             <span className="text-xs text-gray-400">LIVE</span>
           </div>
@@ -334,17 +330,29 @@ export default function Dashboard() {
       </nav>
 
       {/* Main Layout */}
-      <div className="flex h-[calc(100vh-73px)]">
-        {/* Left Sidebar - Discovery Stream */}
-        <div className="w-80 flex-shrink-0">
+      <div className="flex h-[calc(100vh-73px)] relative">
+        {/* Left Sidebar - Discovery Stream - Collapsible */}
+        <div className={`${isSidebarCollapsed ? 'w-0' : 'w-80'} flex-shrink-0 transition-all duration-300 overflow-hidden`}>
           <DiscoveryStream 
             onAnalyze={handleAnalyzeHeadline}
             onBatchAnalyze={handleBatchAnalysisResult}
           />
         </div>
+        
+        {/* Collapse Toggle Button - Centered on the edge */}
+        <button
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          className={`absolute ${isSidebarCollapsed ? 'left-0' : 'left-80'} top-1/2 -translate-y-1/2 -translate-x-1/2 z-50 w-10 h-20 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-red-600 hover:to-red-700 border border-gray-700 hover:border-red-500 rounded-r-lg shadow-lg flex items-center justify-center transition-all duration-300 group`}
+        >
+          {isSidebarCollapsed ? (
+            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-white" />
+          ) : (
+            <ChevronLeft className="w-5 h-5 text-gray-300 group-hover:text-white" />
+          )}
+        </button>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={`flex-1 overflow-y-auto transition-all duration-300 ${isSidebarCollapsed ? 'ml-0' : ''}`}>
           <div className="p-6 space-y-6">
             {/* Asset Selector */}
             <div>
@@ -375,15 +383,29 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Risk Gauge - Hero Element */}
+            {/* Map and Risk Gauge Side by Side */}
             {selectedAsset && (
-              <div className="flex justify-center py-8">
-                <RiskGauge
-                  score={selectedAsset.currentRiskScore}
-                  label={`${selectedAsset.name} Risk Score`}
-                  size="lg"
-                  animated={true}
-                />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Global Risk Map - 2/3 width */}
+                <div className="lg:col-span-2">
+                  <h2 className="text-sm font-medium text-gray-400 mb-4">GLOBAL SUPPLY CHAIN</h2>
+                  <GlobalRiskMap
+                    locations={SAMPLE_LOCATIONS}
+                    selectedAsset={selectedAssetId}
+                  />
+                </div>
+
+                {/* Risk Gauge - 1/3 width, centered */}
+                <div className="flex items-start justify-center pt-4">
+                  <div className="scale-75">
+                    <RiskGauge
+                      score={selectedAsset.currentRiskScore}
+                      label={`${selectedAsset.name} Risk Score`}
+                      size="lg"
+                      animated={true}
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -394,8 +416,17 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* Trading Opportunities */}
+            <div>
+              <h2 className="text-sm font-medium text-gray-400 mb-4">TRADING OPPORTUNITIES</h2>
+              <TradingOpportunities
+                opportunities={currentAnalysis?.opportunities || []}
+                assetName="Cross-Asset Analysis"
+              />
+            </div>
+
             {/* Timeline Charts - Show history for all 3 assets */}
-            <div className="mt-8">
+            <div>
               <h2 className="text-sm font-medium text-gray-400 mb-4">RISK TIMELINE</h2>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <TimelineChart
@@ -422,42 +453,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Trading Opportunities & Global Risk Map */}
-            <div className="mt-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Trading Opportunities Panel */}
-                <div>
-                  <h2 className="text-sm font-medium text-gray-400 mb-4">TRADING OPPORTUNITIES</h2>
-                  <TradingOpportunities
-                    opportunities={currentAnalysis?.opportunities || []}
-                    assetName="Cross-Asset Analysis"
-                  />
-                </div>
-
-                {/* Global Risk Map */}
-                <div>
-                  <h2 className="text-sm font-medium text-gray-400 mb-4">GLOBAL SUPPLY CHAIN</h2>
-                  <GlobalRiskMap
-                    locations={SAMPLE_LOCATIONS}
-                    selectedAsset={selectedAssetId}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Empty State */}
-            {!currentAnalysis && (
-              <div className="text-center py-16 px-4">
-                <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="w-8 h-8 text-gray-600" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-400 mb-2">No Analysis Yet</h3>
-                <p className="text-sm text-gray-500 max-w-md mx-auto">
-                  Click "SCAN FEEDS NOW" in the Discovery Stream to find signals,
-                  or click "INJECT EVENT" to run the demo scenario.
-                </p>
-              </div>
-            )}
+            {/* Empty State - Removed, AI discovery is always active */}
           </div>
         </div>
       </div>
