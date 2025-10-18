@@ -1,4 +1,4 @@
-# FORESIGHT - AI Geopolitical Risk Intelligence Platform
+# ForeSight - Geopolitical Event Intelligence Platform
 
 <div align="center">
 
@@ -24,14 +24,7 @@ The platform automatically discovers breaking news using Perplexity's web search
 
 ## What It Does
 
-FORESIGHT transforms raw geopolitical events into actionable intelligence by:
-
-1. **Auto-Discovery**: Continuously scans global news sources using Perplexity Sonar to identify relevant geopolitical events
-2. **AI Analysis**: Performs deep risk analysis using Perplexity's advanced language models to assess supply chain impacts
-3. **Risk Quantification**: Calculates risk scores (0-10 scale) with component breakdowns across multiple dimensions
-4. **Geographic Visualization**: Maps global supply chain vulnerabilities and risk hotspots
-5. **Trading Intelligence**: Identifies trading opportunities with real-time market data from Finnhub API
-6. **Timeline Tracking**: Maintains historical risk evolution across all monitored assets
+ForeSight monitors global news for geopolitical events, uses AI to analyze potential market impacts, and provides real-time stock data with trading opportunities. It combines news aggregation, AI analysis (via Perplexity Sonar Pro), and live financial data (via Finnhub) to help traders, analysts, and researchers understand how world events affect markets.
 
 ## Key Features
 

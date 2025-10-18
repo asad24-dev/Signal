@@ -78,6 +78,19 @@ export interface RiskSignal {
 
   event: Event;
   analysis: ImpactAnalysis;
+  
+  locations?: Array<{
+    id?: string;
+    name: string;
+    country: string;
+    region?: string;
+    coordinates: [number, number];
+    type: 'mine' | 'refinery' | 'port' | 'processing_plant' | 'general';
+    asset: 'lithium' | 'oil' | 'semiconductors';
+    riskLevel: 'low' | 'moderate' | 'elevated' | 'critical';
+    importance: number;
+    description?: string;
+  }>;
 
   confidence: number;
   severity: number;
@@ -142,6 +155,13 @@ export interface Opportunity {
   riskLevel: RiskLevel;
   timeframe: string;
   citations: Citation[];
+  company?: {
+    name: string;
+    ticker: string;
+    sector?: string;
+    currentPrice?: number;
+  };
+  confidence?: number;
 }
 
 export interface Citation {

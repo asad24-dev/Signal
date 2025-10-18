@@ -48,6 +48,18 @@ interface BatchAnalysisResult {
     description: string;
     affectedAssets: string[];
   }[];
+  locations?: Array<{
+    id?: string;
+    name: string;
+    country: string;
+    region?: string;
+    coordinates: [number, number];
+    type: 'mine' | 'refinery' | 'port' | 'processing_plant' | 'general';
+    asset: 'lithium' | 'oil' | 'semiconductors';
+    riskLevel: 'low' | 'moderate' | 'elevated' | 'critical';
+    importance: number;
+    description?: string;
+  }>;
 }
 
 interface AnalysisOptions {
@@ -170,6 +182,7 @@ export async function analyzeBatchImpact(
     console.log(`✅ Batch analysis parsed successfully`);
     console.log(`   Citations: ${citations.length}`);
     console.log(`   Opportunities: ${parsedResult.opportunities?.length || 0}`);
+    console.log(`   Locations: ${parsedResult.locations?.length || 0}`);
     
     // ENHANCED: Enrich opportunities with real Alpha Vantage data
     let enrichedOpportunities = parsedResult.opportunities || [];
@@ -183,7 +196,8 @@ export async function analyzeBatchImpact(
       assetChanges: parsedResult.assetChanges,
       opportunities: enrichedOpportunities,
       citations,
-      crossAssetImpacts: parsedResult.crossAssetImpacts || []
+      crossAssetImpacts: parsedResult.crossAssetImpacts || [],
+      locations: parsedResult.locations || []
     };
     
   } catch (error: any) {
@@ -251,6 +265,13 @@ YOUR TASK:
    - Realistic ROI estimates (5-20% typical, 20-40% aggressive)
    - Timeframes: short (1-3mo), medium (3-6mo), long (6-12mo)
    - Diversified across risk levels (conservative, moderate, aggressive)
+
+5. EXTRACT GEOGRAPHIC LOCATIONS FROM HEADLINES:
+   - Identify all countries, cities, regions mentioned in the news
+   - Estimate coordinates for each location (latitude, longitude)
+   - Classify location type: mine, refinery, port, processing_plant, or general
+   - Assess risk level for each location
+   - Include importance score (0-1) based on impact
 
 EXAMPLE STOCKS:
 - Lithium: ALB, SQM, LTHM, TSLA (Tesla uses lithium)
@@ -351,6 +372,19 @@ Return ONLY valid JSON (no markdown) with this COMPLETE structure:
     "semiconductors": { /* same structure */ }
   },
   "opportunities": [/* 5-7 HIGH-QUALITY stock recommendations using structure above */],
+  "locations": [
+    {
+      "name": "Atacama Salt Flat",
+      "country": "Chile",
+      "region": "Atacama Desert",
+      "coordinates": [-23.6, -68.2],  // [latitude, longitude]
+      "type": "mine|refinery|port|processing_plant|general",
+      "asset": "lithium|oil|semiconductors",
+      "riskLevel": "low|moderate|elevated|critical",
+      "importance": 0.9,  // 0-1 scale
+      "description": "Major lithium production site"
+    }
+  ],
   "crossAssetImpacts": [
     {
       "from": "lithium",
@@ -364,6 +398,7 @@ Return ONLY valid JSON (no markdown) with this COMPLETE structure:
 REMEMBER:
 - SCORE EACH ASSET (lithium, oil, semiconductors) with reasoning
 - PROVIDE 5-7 HIGH-QUALITY OPPORTUNITIES (focus on quality, not quantity)
+- EXTRACT ALL GEOGRAPHIC LOCATIONS mentioned in headlines with coordinates
 - DISCOVER non-obvious stocks that have a history of being affected by similar events
 - INCLUDE real stock tickers that will be validated with finnhub
 - COMPLETE all JSON objects (don't truncate mid-response)`;
@@ -659,8 +694,16 @@ async function enrichOpportunitiesWithRealData(opportunities: any[]): Promise<an
             ]
           },
           // Fields for standard Opportunity interface (used by UI)
-          potentialReturn: parseFloat(opp.potentialReturn?.replace(/[^0-9.-]/g, '') || '12'), // Convert "+10-15%" to number
-          riskLevel: (opp.riskLevel as any) || 'moderate',
+          // Calculate dynamic potential return from AI data or stock momentum
+          potentialReturn: opp.potentialReturn 
+            ? parseFloat(opp.potentialReturn.toString().replace(/[^0-9.-]/g, '')) 
+            : Math.abs(stockData.changePercent) * 3, // Use 3x recent momentum as fallback
+          // Calculate risk level based on volatility
+          riskLevel: opp.riskLevel || (
+            Math.abs(stockData.changePercent) > 5 ? 'elevated' :
+            Math.abs(stockData.changePercent) > 3 ? 'moderate' :
+            Math.abs(stockData.changePercent) > 1 ? 'low' : 'moderate'
+          ) as any,
           timeframe: opp.timeframe || '3-6 months',
           suggestedActions: [
             `Entry: $${(stockData.price * 0.98).toFixed(2)}`,

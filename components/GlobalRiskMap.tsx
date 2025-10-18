@@ -9,7 +9,7 @@ import { MapPin, Factory, Ship, Zap } from 'lucide-react';
 interface SupplyChainLocation {
   id: string;
   name: string;
-  type: 'mine' | 'refinery' | 'port' | 'processing_plant';
+  type: 'mine' | 'refinery' | 'port' | 'processing_plant' | 'general';
   coordinates: [number, number];
   country: string;
   importance: number; // 0-1
