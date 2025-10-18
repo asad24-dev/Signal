@@ -1,109 +1,274 @@
 # ForeSight - Geopolitical Event Intelligence Platform
 
-An AI-powered real-time monitoring and analysis platform for geopolitical events and their market impacts. Built for the Perplexity Hackathon (Oct 17-18, 2025).
+An AI-powered platform that monitors global geopolitical events and analyzes their potential impact on financial markets using real-time news analysis and stock market data.
 
-## What It Does
+**Live Demo:** [Add deployment URL here]
 
-ForeSight monitors global news for geopolitical events, uses AI to analyze potential market impacts, and provides real-time stock data with trading opportunities. It combines news aggregation, AI analysis (via Perplexity Sonar Pro), and live financial data (via Finnhub) to help traders, analysts, and researchers understand how world events affect markets.
+**Demo Video:** [Add video link here]
 
-## Key Features
+## Overview
 
-- **News Monitoring**: Discovers geopolitical events from news sources
-- **AI Analysis**: Batch analysis using Perplexity Sonar Pro (Deep Research mode)
-- **Live Stock Data**: Real-time quotes and company profiles via Finnhub API
-- **Interactive Map**: Geographic visualization of global events
-- **Trading Opportunities**: AI-identified opportunities with live stock prices and company data
+ForeSight combines AI-powered news analysis with real-time financial data to help traders and analysts understand how geopolitical events affect commodity markets. The platform automatically discovers relevant news, analyzes market impacts using AI, and provides actionable trading insights with live stock prices.
 
-## Quick Start
+## How It Works
 
-### Installation
+1. **Event Discovery**: The system monitors news sources for geopolitical events related to critical commodities (lithium, oil, semiconductors)
+2. **AI Analysis**: Events are analyzed using Perplexity's Sonar Pro API to assess market impact and identify affected companies
+3. **Stock Enrichment**: Trading opportunities are enriched with real-time stock data from Finnhub API
+4. **Visualization**: Results are displayed on an interactive dashboard with geographic mapping and price charts
 
+## Perplexity API Integration
+
+### Usage
+
+The Perplexity API is integrated through the Sonar Pro model (`llama-3.1-sonar-large-128k-online`) and serves as the core intelligence engine for the platform.
+
+### Implementation
+
+**Location**: `lib/perplexity/batch-chat.ts`
+
+**Model**: `llama-3.1-sonar-large-128k-online` (Sonar Pro)
+
+**Purpose**: 
+- Analyzes geopolitical events from news headlines
+- Identifies affected commodities and supply chains
+- Discovers publicly traded companies impacted by events
+- Calculates risk scores and potential market impacts
+- Extracts geographic locations mentioned in news
+
+**API Calls Per Analysis**:
+- 1 batch analysis request containing multiple news events
+- Returns structured JSON with risk assessments, trading opportunities, and location data
+
+**Key Features Used**:
+- Online search capabilities for real-time context
+- Structured JSON output for reliable data extraction
+- Batch processing to analyze multiple events simultaneously
+
+### Response Structure
+
+The Perplexity API returns:
+- Risk scores (0-100) for each affected commodity
+- List of affected public companies with stock tickers
+- Potential return estimates based on event analysis
+- Geographic locations extracted from news
+- Detailed analysis text explaining the market impact
+
+## Features
+
+- Real-time geopolitical event monitoring
+- AI-powered market impact analysis
+- Live stock price data and company profiles
+- Interactive geographic risk mapping
+- 30-day stock price charts for identified opportunities
+- Risk level classification (Low, Moderate, Elevated, High, Critical)
+- Timeline tracking of risk score changes
+
+## Technology Stack
+
+**Frontend Framework**: Next.js 15 (App Router), React 19, TypeScript
+
+**Styling**: Tailwind CSS
+
+**AI & Data APIs**:
+- Perplexity API (Sonar Pro) - Market impact analysis
+- Finnhub API - Real-time stock quotes and company data
+
+**UI Libraries**: Radix UI (accessible components), Lucide React (icons), Recharts (data visualization)
+
+**Mapping**: React-Leaflet with OpenStreetMap tiles
+
+## Prerequisites
+
+- Node.js 18 or higher
+- npm or yarn package manager
+- Perplexity API key
+- Finnhub API key (free tier available)
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/asad24-dev/Signal.git
+cd Signal
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-### Required API Keys
-
-1. **Perplexity API**: Get from [perplexity.ai](https://www.perplexity.ai/settings/api)
-2. **Finnhub API**: Get free tier from [finnhub.io](https://finnhub.io/register) (60 calls/min)
-
-### Environment Setup
-
-Create a `.env.local` file:
-
-```env
-# Required
-PERPLEXITY_API_KEY=your_perplexity_api_key
-FINNHUB_API_KEY=your_finnhub_api_key
-
-# Optional
-NEXT_PUBLIC_MAP_CENTER_LAT=20
-NEXT_PUBLIC_MAP_CENTER_LNG=0
-NEXT_PUBLIC_MAP_ZOOM=2
+3. Create environment file:
+```bash
+cp .env.example .env.local
 ```
 
-### Run
+4. Configure environment variables in `.env.local`:
+```env
+# Required - Perplexity API for AI analysis
+PERPLEXITY_API_KEY=your_perplexity_api_key_here
 
+# Required - Finnhub for stock data
+FINNHUB_API_KEY=your_finnhub_api_key_here
+
+# Required - NextAuth configuration
+NEXTAUTH_SECRET=generate_using_openssl_rand_base64_32
+NEXTAUTH_URL=http://localhost:3000
+
+# Required - Application URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Optional - Feature flags
+USE_DEEP_RESEARCH=false
+DEMO_MODE=true
+```
+
+5. Generate NEXTAUTH_SECRET:
+```bash
+# On Mac/Linux:
+openssl rand -base64 32
+
+# On Windows (PowerShell):
+$bytes = New-Object byte[] 32; (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($bytes); [Convert]::ToBase64String($bytes)
+```
+
+## Getting API Keys
+
+### Perplexity API
+1. Visit [https://www.perplexity.ai/settings/api](https://www.perplexity.ai/settings/api)
+2. Create an account or sign in
+3. Generate an API key
+4. Add credits to your account (usage is pay-as-you-go)
+
+### Finnhub API
+1. Visit [https://finnhub.io/register](https://finnhub.io/register)
+2. Create a free account
+3. Copy your API key from the dashboard
+4. Free tier includes 60 API calls per minute
+
+## Running the Application
+
+Development mode:
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+The application will be available at [http://localhost:3000](http://localhost:3000)
 
-## How to Use
+Production build:
+```bash
+npm run build
+npm start
+```
 
-1. **Discover Events**: Click "Discover Events" to find geopolitical events from news
-2. **Batch Analysis**: Select events and run batch analysis with Perplexity Sonar Pro
-3. **Review Results**: View AI analysis, trading opportunities, and live stock data
-4. **Export**: Export results to JSON or CSV
+## Usage
 
-## Tech Stack
+1. **Initial Load**: The dashboard displays three commodity categories (Lithium, Oil, Semiconductors) with risk tracking timelines
 
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
-- **AI**: Perplexity Sonar Pro (llama-3.1-sonar-large-128k-online)
-- **Financial Data**: Finnhub API (real-time stock quotes, company profiles)
-- **UI Components**: Radix UI, Lucide Icons
-- **Maps**: React-Leaflet, OpenStreetMap
+2. **Event Discovery**: Navigate to the "Discovery Stream" section to see recent geopolitical news events
 
-## Troubleshooting
+3. **Batch Analysis**: Select multiple events and click "Analyze Selected" to run AI analysis through Perplexity API
 
-### Rate Limits
+4. **View Results**: 
+   - Risk scores update in real-time on the timeline charts
+   - Trading opportunities appear with live stock prices
+   - Geographic locations are plotted on the interactive map
+   - Click on opportunities to view 30-day price charts
 
-- **Perplexity**: ~$0.035 per analysis (3 requests per event)
-- **Finnhub**: 60 API calls/min (free tier)
-
-### Common Issues
-
-- **No trading opportunities**: Check that Finnhub API key is set correctly
-- **Rate limit errors**: Reduce batch size or wait between analyses
-- **TypeScript errors**: Run `npm run type-check` to see detailed errors
+5. **Monitor Changes**: The timeline shows how risk scores evolve as new events are analyzed
 
 ## Project Structure
 
 ```
 signal/
-├── app/              # Next.js app router pages
-├── components/       # React components
+├── app/
+│   ├── api/                 # API routes
+│   │   ├── analyze-batch/   # Batch event analysis endpoint
+│   │   ├── assets/          # Asset data endpoints
+│   │   └── stock/           # Stock data endpoints (Finnhub)
+│   ├── layout.tsx           # Root layout with metadata
+│   └── page.tsx             # Main dashboard page
+├── components/
+│   ├── AnalysisModal.tsx    # Event analysis dialog
+│   ├── DiscoveryStream.tsx  # News feed with batch analysis
+│   ├── GlobalRiskMap.tsx    # Interactive geographic map
+│   ├── StockChart.tsx       # 30-day price charts
+│   └── TradingOpportunities.tsx # Stock opportunities list
 ├── lib/
-│   ├── finance/      # Finnhub API integration
-│   ├── perplexity/   # Perplexity API client
-│   └── utils/        # Utilities
-└── types/            # TypeScript types
+│   ├── finance/
+│   │   └── finnhub.ts       # Finnhub API client
+│   ├── perplexity/
+│   │   └── batch-chat.ts    # Perplexity API integration
+│   └── data/
+│       └── assets.ts        # Asset definitions
+├── types/
+│   ├── index.ts             # Core type definitions
+│   └── finance.ts           # Financial data types
+└── .env.local               # Environment variables (not in repo)
 ```
 
-## Development
+## Dependencies
+
+### Core Dependencies
+- `next`: ^15.0.3 - React framework with App Router
+- `react`: ^19.0.0-rc - UI library
+- `typescript`: ^5.7.2 - Type safety
+
+### AI & Data
+- `perplexity-ai`: Custom integration - AI analysis
+- `axios`: ^1.7.9 - HTTP client for API calls
+
+### UI & Visualization
+- `@radix-ui/*`: Various - Accessible component primitives
+- `recharts`: ^2.15.0 - Charts and graphs
+- `react-leaflet`: ^4.2.1 - Interactive maps
+- `leaflet`: ^1.9.4 - Mapping library
+- `lucide-react`: ^0.468.0 - Icon library
+
+### Utilities
+- `tailwindcss`: ^3.4.17 - Utility-first CSS
+- `date-fns`: ^4.1.0 - Date manipulation
+
+See `package.json` for complete dependency list.
+
+## API Rate Limits
+
+**Perplexity API**:
+- Pay-as-you-go pricing (~$0.035 per analysis)
+- No hard rate limits on paid accounts
+- Recommended: Monitor usage in Perplexity dashboard
+
+**Finnhub API (Free Tier)**:
+- 60 API calls per minute
+- Real-time stock quotes included
+- Historical data may be limited
+
+## Troubleshooting
+
+**Build errors about route handlers**:
+Ensure you're using Next.js 15. Route parameters are now async and must be awaited.
+
+**Missing stock data**:
+Verify your Finnhub API key is set correctly in `.env.local` and that you haven't exceeded rate limits.
+
+**No analysis results**:
+Check that your Perplexity API key is valid and has sufficient credits.
+
+**Map not displaying**:
+Leaflet requires client-side rendering. Ensure components using maps have 'use client' directive.
+
+## Development Commands
 
 ```bash
-npm run dev          # Start dev server
+npm run dev          # Start development server
 npm run build        # Build for production
-npm run type-check   # Check TypeScript
+npm run start        # Run production build
 npm run lint         # Run ESLint
+npm run type-check   # TypeScript type checking
 ```
 
-## License
+## Acknowledgments
 
-MIT
+Built for the Perplexity API Hackathon, October 17-18, 2025.
 
----
-
-**Built for Perplexity Hackathon** | October 17-18, 2025
+This project demonstrates the integration of Perplexity's Sonar Pro API for real-time geopolitical analysis combined with financial market data to create actionable intelligence for traders and analysts.
