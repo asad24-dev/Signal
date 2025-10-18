@@ -4,7 +4,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAssetById } from "@/lib/data/assets";
 import { analyzeEventImpact } from "@/lib/perplexity/chat";
-import { calculateRiskScore } from "@/lib/risk/scorer";
+import { calculateRiskScore, scoreToLevel } from "@/lib/risk/scorer";
+import { getLLMRiskWeighting, applyLLMWeighting } from "@/lib/risk/llm-scorer";
 import { classifyEventType } from "@/lib/feeds/classifier";
 import type { RiskSignal, Event } from "@/types";
 
@@ -75,10 +76,22 @@ export async function POST(request: NextRequest) {
     console.log(`   Impacts: ${analysis.impacts.length}`);
     console.log(`   Opportunities: ${analysis.opportunities.length}`);
     
-    // Calculate risk score
+    // ✨ NEW: Get LLM-powered risk weighting (reads the news and decides!)
+    console.log("🧠 Getting LLM risk weighting...");
+    const llmWeighting = await getLLMRiskWeighting(asset, event, analysis);
+    
+    // Apply LLM weighting to current score
+    const newRiskValue = applyLLMWeighting(asset.currentRiskScore, llmWeighting);
+    
+    // Still use traditional scorer for component breakdown (UI display)
     const riskScore = calculateRiskScore(asset, event, analysis);
     
+    // Override the value with LLM-determined score
+    riskScore.value = newRiskValue;
+    riskScore.level = scoreToLevel(newRiskValue);
+    
     console.log(`   Risk: ${asset.currentRiskScore} → ${riskScore.value} (${riskScore.level})`);
+    console.log(`   LLM Decision: ${llmWeighting.direction.toUpperCase()} by ${llmWeighting.magnitude}`);
     
     // Create risk signal
     const signal: RiskSignal = {

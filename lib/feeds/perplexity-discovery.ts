@@ -18,15 +18,15 @@ export async function discoverBreakingNews(
   const startTime = Date.now();
   
   try {
-    // Build more specific search query
+    // Build more flexible search query - not limited to 24 hours
     const searchQuery = `
-Find breaking news from the last 24 hours about:
+Find recent news and developments about:
 
-1. LITHIUM: Mining strikes, production disruptions, Chile/Argentina/Australia operations, SQM, Albemarle, supply shortages
-2. CRUDE OIL: OPEC decisions, pipeline attacks, sanctions, tanker incidents, production cuts, refinery disruptions, Middle East conflicts
-3. SEMICONDUCTORS: TSMC operations, chip factory issues, Taiwan geopolitical tensions, supply chain disruptions, silicon shortages
+1. LITHIUM: Mining operations, strikes, production changes, Chile/Argentina/Australia, SQM, Albemarle, supply chain, market trends
+2. CRUDE OIL: OPEC policies, pipeline operations, sanctions, tanker incidents, production levels, refinery news, Middle East developments, price changes
+3. SEMICONDUCTORS: TSMC news, chip manufacturing, factory operations, Taiwan geopolitics, supply chain, silicon production, industry trends
 
-Focus on supply disruptions, geopolitical events, and market-moving news.
+Include both breaking news and important recent developments that could impact supply chains or markets.
 `.trim();
 
     console.log('🔍 Search query:', searchQuery.slice(0, 200) + '...');
@@ -36,26 +36,31 @@ Focus on supply disruptions, geopolitical events, and market-moving news.
       messages: [
         {
           role: "system",
-          content: `You are a news aggregator finding breaking geopolitical and supply chain news from the last 24 hours. 
-Return ONLY a JSON array of news items with this exact structure:
+          content: `You are a financial news aggregator finding important geopolitical and supply chain news. 
+Return ONLY a JSON array of news items with this exact structure (NO markdown, NO code blocks, PURE JSON):
 [
   {
     "title": "Full headline text",
     "url": "https://source.com/article",
     "source": "Source name",
     "description": "Brief summary (1-2 sentences)",
-    "publishedAt": "ISO date string",
-    "relevance": 0.5-0.95
+    "publishedAt": "2025-10-18T10:00:00Z",
+    "relevance": 0.65
   }
 ]
 
-CRITICAL RULES:
-1. Return 10-15 items covering ALL THREE assets (lithium, oil, semiconductors)
-2. Mix of different assets - not all from one category
-3. Only breaking news from last 24 hours
-4. Each item must have all fields filled
-5. NO markdown formatting - pure JSON array only
-6. Higher relevance (0.8-0.95) for major disruptions, lower (0.5-0.7) for routine news`
+CRITICAL REQUIREMENTS:
+1. Return 12-15 items covering ALL THREE categories (lithium, oil, semiconductors)
+2. Mix different assets - NOT all from one category (aim for 4-5 items per asset)
+3. Include both breaking news AND important ongoing developments
+4. Prioritize supply disruptions, geopolitical events, major company news, policy changes
+5. Relevance scoring:
+   - 0.85-0.95: Major disruptions (strikes, conflicts, disasters, sanctions)
+   - 0.70-0.84: Significant news (policy changes, production shifts, trade developments)
+   - 0.55-0.69: Important updates (market trends, company reports, regional news)
+6. MUST return valid JSON array - no extra text, no markdown
+7. If no breaking news today, include news from this week
+8. Each item MUST have all fields with realistic data`
         },
         {
           role: "user",
@@ -63,14 +68,22 @@ CRITICAL RULES:
         }
       ],
       web_search_options: {
-        search_type: "auto" // Let Perplexity decide fast vs pro
+        search_type: "auto"
       },
       stream: false
     });
 
     const content = (response as any).choices[0]?.message?.content || '[]';
+    const searchResults = (response as any).search_results || [];
     
     console.log('📄 Perplexity raw response (first 500 chars):', content.slice(0, 500));
+    console.log('🔗 Citations found:', searchResults.length);
+    if (searchResults.length > 0) {
+      console.log('   Sample citations:');
+      searchResults.slice(0, 3).forEach((r: any, i: number) => {
+        console.log(`   ${i + 1}. ${r.title || r.url || 'Unknown'}`);
+      });
+    }
     
     // Extract JSON from response - handle markdown code blocks
     let jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
@@ -82,6 +95,13 @@ CRITICAL RULES:
     if (!jsonMatch) {
       console.warn('⚠️ Perplexity Discovery: No JSON found in response');
       console.warn('   Full response:', content);
+      
+      // Fallback: Try to use search results as headlines if JSON parsing failed
+      if (searchResults.length > 0) {
+        console.log('🔄 Attempting fallback: Converting search results to headlines...');
+        return convertSearchResultsToHeadlines(searchResults);
+      }
+      
       return [];
     }
 
@@ -89,7 +109,12 @@ CRITICAL RULES:
     console.log('📋 Extracted JSON:', jsonString.slice(0, 300));
     
     const newsItems = JSON.parse(jsonString);
-    const searchResults = (response as any).search_results || [];
+    
+    // If Perplexity returned empty array but we have citations, use fallback
+    if (newsItems.length === 0 && searchResults.length > 0) {
+      console.log('⚠️ Perplexity returned empty array, using citations as fallback...');
+      return convertSearchResultsToHeadlines(searchResults);
+    }
     
     // Convert to Headline format
     const headlines: Headline[] = newsItems.map((item: any, index: number) => {
@@ -142,6 +167,49 @@ CRITICAL RULES:
     console.error('   Stack:', error.stack);
     return [];
   }
+}
+
+/**
+ * Fallback: Convert Perplexity search results to headlines
+ */
+function convertSearchResultsToHeadlines(searchResults: any[]): Headline[] {
+  console.log(`🔄 Converting ${searchResults.length} search results to headlines...`);
+  
+  return searchResults.slice(0, 15).map((result: any, index: number) => {
+    const title = result.title || result.name || 'Untitled';
+    const url = result.url || '';
+    const description = result.snippet || result.description || '';
+    const text = `${title} ${description}`.toLowerCase();
+    
+    // Determine matched assets
+    const matchedAssets: string[] = [];
+    if (text.match(/lithium|chile|argentina|sqm|albemarle/i)) matchedAssets.push('lithium');
+    if (text.match(/oil|crude|opec|petroleum|tanker|pipeline/i)) matchedAssets.push('oil');
+    if (text.match(/semiconductor|chip|tsmc|taiwan|silicon|fab/i)) matchedAssets.push('semiconductors');
+    
+    // Calculate confidence
+    const baseConfidence = 0.6;
+    const assetBonus = matchedAssets.length * 0.1;
+    const variance = (Math.random() * 0.1) - 0.05;
+    const confidence = Math.max(0.5, Math.min(0.9, baseConfidence + assetBonus + variance));
+    
+    console.log(`   📰 "${title.slice(0, 60)}..." → ${matchedAssets.join(', ') || 'none'} (conf: ${(confidence * 100).toFixed(1)}%)`);
+    
+    return {
+      id: `perplexity-${Date.now()}-${index}`,
+      title,
+      url,
+      source: result.source || 'Web Search',
+      publishedAt: new Date(),
+      description,
+      triageStatus: matchedAssets.length > 0 ? 'flagged' : 'noise',
+      matchedAssets,
+      matchedKeywords: extractKeywords(title + ' ' + description),
+      confidence,
+      aiScore: confidence,
+      aiReason: 'Discovered via Perplexity search results'
+    };
+  });
 }
 
 /**

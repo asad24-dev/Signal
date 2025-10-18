@@ -22,6 +22,10 @@ export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
   useEffect(() => {
     if (!isLiveMode) return;
 
+    // Trigger immediate scan when entering live mode
+    triggerScan(false); // Show loading UI
+    
+    // Then auto-scan every 60 seconds
     const interval = setInterval(() => {
       triggerScan(true); // Silent auto-scan
     }, 60000); // Every 60 seconds
@@ -115,6 +119,11 @@ export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
         const signalIds = data.signals.map((s: Headline) => s.id);
         setFlashingIds(new Set(signalIds));
         setTimeout(() => setFlashingIds(new Set()), 3000);
+        
+        // Show success message if Perplexity was used
+        if (isLiveMode && data.scan?.perplexityCount > 0) {
+          console.log(`✨ Perplexity discovered ${data.scan.perplexityCount} new signals`);
+        }
       }
     } catch (error) {
       console.error('Scan failed:', error);
@@ -170,7 +179,7 @@ export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
         </div>
         
         {/* Perplexity Discovery Status */}
-        {isLiveMode && (
+        {isLiveMode && !isScanning && (
           <div className="mb-3 p-2 bg-purple-900/20 border border-purple-500/30 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
@@ -184,12 +193,34 @@ export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
           </div>
         )}
         
+        {/* Live Mode Loading State */}
+        {isLiveMode && isScanning && (
+          <div className="mb-3 p-3 bg-purple-900/30 border border-purple-500/50 rounded-lg animate-pulse">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-purple-200 font-semibold">
+                🔍 Searching the Web with AI
+              </span>
+            </div>
+            <p className="text-xs text-purple-300/80 mb-2">
+              Perplexity is analyzing breaking signals across lithium, oil, and semiconductors...
+            </p>
+            <div className="flex items-center gap-1">
+              <div className="flex-1 h-1 bg-purple-950 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 animate-shimmer" 
+                     style={{ width: '100%', animation: 'shimmer 2s infinite' }} />
+              </div>
+              <span className="text-xs text-purple-400">20-30s</span>
+            </div>
+          </div>
+        )}
+        
         <button
           onClick={() => triggerScan(false)}
           disabled={isScanning || isLiveMode}
           className="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
         >
-          {isScanning ? (
+          {isScanning && !isLiveMode ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               Scanning...
@@ -197,7 +228,7 @@ export function DiscoveryStream({ onAnalyze }: DiscoveryStreamProps) {
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              SCAN FEEDS NOW
+              {isLiveMode ? 'AUTO MODE ACTIVE' : 'SCAN FEEDS NOW'}
             </>
           )}
         </button>
