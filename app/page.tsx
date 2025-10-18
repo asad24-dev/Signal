@@ -34,6 +34,8 @@ export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(320); // Default 320px (w-80)
+  const [isResizing, setIsResizing] = useState(false);
   
   // Timeline data for each asset
   const [timelineData, setTimelineData] = useState<{
@@ -55,6 +57,48 @@ export default function Dashboard() {
   
   // Store extracted locations from AI analysis
   const [extractedLocations, setExtractedLocations] = useState<ExtractedLocation[]>([]);
+
+  // Sidebar resize handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 250 && newWidth <= 600) { // Min 250px, Max 600px
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
+  // Double-click to collapse/expand
+  const handleDoubleClick = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
 
   // Load timeline data from localStorage on mount
   useEffect(() => {
@@ -342,28 +386,43 @@ export default function Dashboard() {
 
       {/* Main Layout */}
       <div className="flex h-[calc(100vh-73px)] relative">
-        {/* Left Sidebar - Discovery Stream - Collapsible */}
-        <div className={`${isSidebarCollapsed ? 'w-0' : 'w-80'} flex-shrink-0 transition-all duration-300 overflow-hidden`}>
+        {/* Left Sidebar - Discovery Stream - Resizable */}
+        <div 
+          className={`flex-shrink-0 ${isSidebarCollapsed ? 'w-0 overflow-hidden' : ''} ${isResizing ? '' : 'transition-all duration-300'}`}
+          style={{ width: isSidebarCollapsed ? 0 : sidebarWidth }}
+        >
           <DiscoveryStream 
             onAnalyze={handleAnalyzeHeadline}
             onBatchAnalyze={handleBatchAnalysisResult}
           />
         </div>
         
-        {/* Collapse Toggle Button - Centered on the edge */}
-        <button
-          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className={`absolute ${isSidebarCollapsed ? 'left-0' : 'left-80'} top-1/2 -translate-y-1/2 -translate-x-1/2 z-50 w-10 h-20 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-red-600 hover:to-red-700 border border-gray-700 hover:border-red-500 rounded-r-lg shadow-lg flex items-center justify-center transition-all duration-300 group`}
-        >
-          {isSidebarCollapsed ? (
-            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-white" />
-          ) : (
-            <ChevronLeft className="w-5 h-5 text-gray-300 group-hover:text-white" />
-          )}
-        </button>
+        {/* Resize Handle & Double-Click Border */}
+        {!isSidebarCollapsed && (
+          <div
+            className="w-1 bg-gray-800 hover:bg-cyan-500 cursor-col-resize relative group transition-colors"
+            onMouseDown={handleMouseDown}
+            onDoubleClick={handleDoubleClick}
+          >
+            {/* Hover indicator */}
+            <div className="absolute inset-0 w-4 -left-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-full h-full bg-cyan-500/20" />
+            </div>
+          </div>
+        )}
+        
+        {/* Collapsed State - Small Expand Button */}
+        {isSidebarCollapsed && (
+          <button
+            onClick={() => setIsSidebarCollapsed(false)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-16 bg-gray-800 hover:bg-cyan-600 border-r border-gray-700 hover:border-cyan-500 rounded-r flex items-center justify-center transition-all duration-300 group z-50"
+          >
+            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-white" />
+          </button>
+        )}
 
         {/* Main Content */}
-        <div className={`flex-1 overflow-y-auto transition-all duration-300 ${isSidebarCollapsed ? 'ml-0' : ''}`}>
+        <div className={`flex-1 overflow-y-auto transition-all duration-300`}>
           <div className="p-6 space-y-6">
             {/* Asset Selector */}
             <div>
